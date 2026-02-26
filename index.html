@@ -1,0 +1,1578 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Quick NPC Generator (DnD)</title>
+  <style>
+    :root{
+      --bg:#0b0f14; --panel:#0f1621; --panel2:#0c121b;
+      --text:#e8eef7; --muted:#a9b6c8; --line:#223044;
+      --acc:#7dd3fc; --acc2:#a78bfa; --bad:#fb7185; --good:#34d399;
+      --shadow: 0 12px 30px rgba(0,0,0,.45);
+      --radius: 16px;
+      --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono","Courier New", monospace;
+      --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji","Segoe UI Emoji";
+    }
+    *{box-sizing:border-box}
+    body{
+      margin:0; font-family:var(--sans); color:var(--text); background:
+        radial-gradient(1200px 700px at 20% -10%, rgba(167,139,250,.18), transparent 55%),
+        radial-gradient(900px 600px at 90% 10%, rgba(125,211,252,.16), transparent 55%),
+        linear-gradient(180deg, #070a0f, var(--bg));
+      min-height:100vh;
+    }
+    header{
+      padding:22px 18px 10px;
+      max-width:none; margin:0 auto;
+      display:flex; align-items:flex-end; gap:14px; justify-content:space-between; flex-wrap:wrap;
+    }
+    .title{
+      display:flex; flex-direction:column; gap:6px;
+    }
+    .title h1{margin:0; font-size:22px; letter-spacing:.2px}
+    .title p{margin:0; color:var(--muted); font-size:13px}
+    .wrap{max-width:none; margin:0 auto; padding:12px 18px 26px; display:grid; gap:14px; grid-template-columns: minmax(320px, 420px) 1fr; width:100%;}
+    @media (max-width: 980px){ .wrap{grid-template-columns:1fr;} }
+    .card{
+      background:linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.015));
+      border:1px solid var(--line); border-radius:var(--radius);
+      box-shadow:var(--shadow);
+      overflow:hidden;
+    }
+    .card .hd{
+      padding:14px 14px 12px;
+      border-bottom:1px solid var(--line);
+      background:linear-gradient(180deg, rgba(255,255,255,.02), transparent);
+      display:flex; align-items:center; justify-content:space-between; gap:10px;
+    }
+    .hd .k{display:flex; flex-direction:column; gap:3px}
+    .hd .k .t{font-weight:700; letter-spacing:.2px}
+    .hd .k .s{color:var(--muted); font-size:12px}
+    .card .bd{padding:14px}
+    .grid{display:grid; gap:10px}
+    .grid2{display:grid; gap:10px; grid-template-columns:1fr 1fr;}
+    .grid3{display:grid; gap:10px; grid-template-columns:1fr 1fr 1fr;}
+    @media (max-width: 980px){ .grid2,.grid3{grid-template-columns:1fr;} }
+
+    label{display:flex; flex-direction:column; gap:6px; font-size:12px; color:var(--muted)}
+    input, select, textarea{
+      width:100%; padding:10px 10px; border-radius:12px;
+      border:1px solid #28364a; background:#0a0f17; color:var(--text);
+      outline:none;
+    }
+    textarea{min-height:88px; resize:vertical}
+    input:focus, select:focus, textarea:focus{border-color:rgba(125,211,252,.65); box-shadow:0 0 0 3px rgba(125,211,252,.12)}
+    .row{display:flex; gap:10px; flex-wrap:wrap}
+    .btn{
+      cursor:pointer; border:1px solid #2b3a52; background:linear-gradient(180deg, rgba(125,211,252,.20), rgba(125,211,252,.10));
+      color:var(--text); padding:10px 12px; border-radius:12px; font-weight:700; letter-spacing:.2px;
+      display:inline-flex; align-items:center; gap:8px;
+    }
+    .btn:hover{filter:brightness(1.06)}
+    .btn.secondary{
+      background:linear-gradient(180deg, rgba(167,139,250,.18), rgba(167,139,250,.09));
+      border-color:#3a2f62;
+    }
+    .btn.ghost{
+      background:transparent; border-color:#2b3a52; color:var(--muted);
+    }
+    .btn.danger{
+      background:linear-gradient(180deg, rgba(251,113,133,.20), rgba(251,113,133,.10));
+      border-color:#5a2a3a;
+    }
+    .pill{
+      font-size:12px; color:var(--muted);
+      border:1px solid var(--line); background:rgba(0,0,0,.18);
+      padding:6px 10px; border-radius:999px;
+    }
+    .out{
+      font-family:var(--mono); font-size:12.6px; line-height:1.45;
+      background:linear-gradient(180deg, rgba(0,0,0,.24), rgba(0,0,0,.12));
+      border:1px solid var(--line); border-radius:14px;
+      padding:14px; white-space:pre-wrap;
+    }
+    .split{
+      display:grid; gap:12px; grid-template-columns:1fr minmax(320px, 380px);
+    }
+    @media (max-width: 980px){ .split{grid-template-columns:1fr;} }
+
+    .small{font-size:12px; color:var(--muted)}
+    .mono{font-family:var(--mono)}
+    .toast{
+      position:fixed; left:50%; bottom:20px; transform:translateX(-50%);
+      background:#0c1420; border:1px solid #2b3a52; color:var(--text);
+      padding:10px 12px; border-radius:999px; box-shadow:var(--shadow);
+      opacity:0; pointer-events:none; transition:opacity .2s ease;
+      font-size:13px;
+    }
+    .toast.show{opacity:1}
+    .hr{height:1px; background:var(--line); margin:10px 0}
+    .checkrow{display:flex; align-items:center; gap:10px; color:var(--muted); font-size:12px}
+    .checkrow input{width:auto}
+.outfmt{
+      font-family: var(--sans);
+      font-size: 13px;
+      line-height: 1.5;
+      padding: 0;
+      background: transparent;
+      border: none;
+    }
+    .outfmt .npcHead{
+      display:flex; flex-wrap:wrap; gap:10px; align-items:baseline; justify-content:space-between;
+      padding: 10px 12px; border:1px solid var(--line); border-radius:14px;
+      background:linear-gradient(180deg, rgba(255,255,255,.03), rgba(255,255,255,.01));
+      margin-bottom:10px;
+    }
+    .outfmt .npcHead h2{margin:0; font-size:18px; letter-spacing:.2px}
+    .outfmt .meta{color:var(--muted); font-size:12px}
+    .outfmt .pills{display:flex; gap:8px; flex-wrap:wrap}
+    .outfmt .pill2{
+      font-size:12px; color:var(--muted);
+      border:1px solid var(--line); background:rgba(0,0,0,.16);
+      padding:6px 10px; border-radius:999px;
+    }
+    .outfmt .sections{
+      display:grid; gap:10px; grid-template-columns: 1fr 1fr;
+    }
+    @media (max-width: 980px){ .outfmt .sections{grid-template-columns:1fr;} }
+    .outfmt .sec{
+      border:1px solid var(--line); border-radius:14px; padding:10px 12px;
+      background:rgba(0,0,0,.12);
+    }
+    .outfmt .sec h3{margin:0 0 6px; font-size:13px; letter-spacing:.2px}
+    .outfmt ul{margin:6px 0 0; padding-left:18px; color:var(--text)}
+    .outfmt li{margin:4px 0}
+    .outfmt .statgrid{
+      display:grid; grid-template-columns: repeat(3, 1fr); gap:8px;
+      margin-top:8px;
+    }
+    @media (max-width: 980px){ .outfmt .statgrid{grid-template-columns:1fr;} }
+    .outfmt .stat{
+      border:1px solid #25344a; border-radius:12px; padding:8px 10px; background:#0a0f17;
+    }
+    .outfmt .stat .k{color:var(--muted); font-size:11px}
+    .outfmt .stat .v{font-weight:800; margin-top:2px}
+    mark.hl{
+      background: rgba(125,211,252,.22);
+      color: var(--text);
+      padding: 0 2px;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="title">
+      <h1>Quick NPC Generator (DnD)</h1>
+      <p>Procedural NPCs with optional name/race/class influence. Export as Markdown / JSON / TXT.</p>
+    </div>
+    <div class="row">
+      <button class="btn" id="btnGen">✨ Generate NPC</button>
+      <button class="btn secondary" id="btnReroll">🎲 Reroll (same inputs)</button>
+      <button class="btn ghost" id="btnClear">🧹 Clear</button>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="card">
+      <div class="hd">
+        <div class="k">
+          <div class="t">Generator Inputs</div>
+          <div class="s">Leave blank for fully random. Race/Class change stats, features, and flavor.</div>
+        </div>
+        <span class="pill" id="seedPill">Seed: —</span>
+      </div>
+
+      <div class="bd grid">
+        <div class="grid2">
+          <label>
+            Name (optional)
+            <input id="inName" placeholder="e.g., Elowen Thorne" />
+          </label>
+          <label>
+            Pronouns (optional)
+            <select id="inPronouns">
+              <option value="">Random</option>
+              <option value="they/them">they/them</option>
+              <option value="she/her">she/her</option>
+              <option value="he/him">he/him</option>
+              <option value="xe/xem">xe/xem</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="grid2">
+          <label>
+            Race (optional)
+            <select id="inRace"></select>
+          </label>
+          <label>
+            Class / Archetype (optional)
+            <select id="inClass"></select>
+          </label>
+        </div>
+
+        <div class="grid3">
+          <label>
+            Level / CR style (quick)
+            <select id="inTier">
+              <option value="random">Random</option>
+              <option value="commoner">Commoner / Civilian</option>
+              <option value="low">Low (Lvl 1–3)</option>
+              <option value="mid">Mid (Lvl 4–7)</option>
+              <option value="high">High (Lvl 8–12)</option>
+              <option value="elite">Elite (Lvl 13–16)</option>
+            </select>
+          </label>
+          <label>
+            Region / Culture vibe
+            <select id="inRegion">
+              <option value="">Random</option>
+              <option>Cosmopolitan City</option>
+              <option>Frontier Town</option>
+              <option>Ancient Empire</option>
+              <option>Desert Kingdoms</option>
+              <option>Frozen North</option>
+              <option>Island Archipelago</option>
+              <option>Deep Forest Realms</option>
+              <option>Mountain Holds</option>
+              <option>Underdark Fringe</option>
+              <option>Planar Crossroads</option>
+            </select>
+          </label>
+          <label>
+            Tone
+            <select id="inTone">
+              <option value="">Random</option>
+              <option>Grounded</option>
+              <option>Heroic</option>
+              <option>Gritty</option>
+              <option>Mysterious</option>
+              <option>Comedic</option>
+              <option>Horror-tinged</option>
+            </select>
+          </label>
+        </div>
+
+        <label>
+          Notes / constraints (optional)
+          <textarea id="inNotes" placeholder="e.g., 'secretly a cultist', 'missing an arm', 'works for the mayor'"></textarea>
+        </label>
+
+
+        <div class="grid2">
+          <label>
+            Seed (optional, shareable)
+            <input id="inSeed" placeholder="Paste a seed to reproduce an NPC" />
+          </label>
+          <div class="grid" style="align-content:end;">
+            <button class="btn ghost" id="btnApplySeed">🎯 Apply Seed</button>
+            <button class="btn ghost" id="btnCopyLink">🔗 Copy Share Link</button>
+          </div>
+        </div>
+
+        <div class="checkrow">
+          <input type="checkbox" id="ckIncludeGear" checked />
+          <span>Include starting gear + loot hooks</span>
+        </div>
+        <div class="checkrow">
+          <input type="checkbox" id="ckIncludePlot" checked />
+          <span>Include plot hooks + secrets</span>
+        </div>
+        <div class="checkrow">
+          <input type="checkbox" id="ckCompact" />
+          <span>Compact output (shorter paragraphs)</span>
+        </div>
+
+        <div class="row">
+          <button class="btn" id="btnCopy">📋 Copy</button>
+          <button class="btn ghost" id="btnExportMD">⬇️ Export Markdown</button>
+          <button class="btn ghost" id="btnExportTXT">⬇️ Export TXT</button>
+          <button class="btn ghost" id="btnExportJSON">⬇️ Export JSON</button>
+        </div>
+
+        <div class="small">
+          Tip: Race/Class influence ability biases, proficiencies, spell flavor, and “signature move” suggestions.
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="hd">
+        <div class="k">
+          <div class="t">Generated NPC</div>
+          <div class="s">Ready-to-run. Tweak anything, then export.</div>
+        </div>
+        <span class="pill" id="metaPill">—</span>
+      </div>
+
+      <div class="bd split">
+        <div>
+          <div class="card" style="box-shadow:none; border-radius:14px; border:1px solid var(--line); background:rgba(0,0,0,.14); overflow:hidden;">
+            <div class="hd" style="border-bottom:1px solid var(--line); border-radius:0; padding:10px 12px;">
+              <div class="k">
+                <div class="t">Output</div>
+                <div class="s">Formatted view for scanning + raw view for copy/export</div>
+              </div>
+              <div class="row" style="gap:8px;">
+                <span class="pill" id="viewPill">Formatted</span>
+              </div>
+            </div>
+            <div class="bd" style="padding:12px;">
+              <div class="grid2" style="align-items:end;">
+                <label>
+                  Find in output
+                  <input id="inFind" placeholder="e.g., AC, Secret, Backstory..." />
+                </label>
+                <div class="row" style="justify-content:flex-end; gap:8px;">
+                  <button class="btn ghost" id="btnViewFormatted">🧾 Formatted</button>
+                  <button class="btn ghost" id="btnViewRaw">⌨️ Raw</button>
+                </div>
+              </div>
+              <div class="hr"></div>
+              <div id="outFormatted" class="out outfmt" style="white-space:normal;"></div>
+              <div id="outRaw" class="out" style="display:none;"></div>
+            </div>
+          </div>
+        </div>
+        <div class="grid">
+          <div class="card" style="box-shadow:none; border-radius:14px; border:1px solid var(--line); background:rgba(0,0,0,.14);">
+            <div class="bd">
+              <div style="font-weight:800; margin-bottom:8px;">Quick Controls</div>
+              <div class="grid">
+                <label>
+                  Output format (preview)
+                  <select id="inPreviewFmt">
+                    <option value="md">Markdown</option>
+                    <option value="txt">Plain text</option>
+                  </select>
+                </label>
+                <button class="btn secondary" id="btnNewSeed">🔁 New Seed</button>
+                <button class="btn danger" id="btnNudgeEvil">😈 Nudge “darker”</button>
+                <button class="btn" id="btnNudgeGood">😇 Nudge “kinder”</button>
+                <div class="small">
+                  “Nudges” keep the same core NPC but shift alignment/traits and a couple backstory beats.
+                </div>
+              </div>
+              <div class="hr"></div>
+              <div class="small mono" id="debugMini"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </section>
+  </main>
+
+  <div class="toast" id="toast"></div>
+
+<script>
+/* =========================
+   Quick NPC Generator (DnD 5e-inspired)
+   Single-file, deterministic by seed.
+   ========================= */
+
+const $ = sel => document.querySelector(sel);
+const els = {
+  inName: $("#inName"),
+  inPronouns: $("#inPronouns"),
+  inRace: $("#inRace"),
+  inClass: $("#inClass"),
+  inTier: $("#inTier"),
+  inRegion: $("#inRegion"),
+  inTone: $("#inTone"),
+  inNotes: $("#inNotes"),
+  inSeed: $("#inSeed"),
+  inFind: $("#inFind"),
+  outFormatted: $("#outFormatted"),
+  outRaw: $("#outRaw"),
+  viewPill: $("#viewPill"),
+  ckIncludeGear: $("#ckIncludeGear"),
+  ckIncludePlot: $("#ckIncludePlot"),
+  ckCompact: $("#ckCompact"),
+  inPreviewFmt: $("#inPreviewFmt"),
+  seedPill: $("#seedPill"),
+  metaPill: $("#metaPill"),
+  debugMini: $("#debugMini"),
+  toast: $("#toast"),
+};
+
+const RNG = (() => {
+  // Mulberry32 + string hash
+  function xmur3(str){
+    let h = 1779033703 ^ str.length;
+    for(let i=0;i<str.length;i++){
+      h = Math.imul(h ^ str.charCodeAt(i), 3432918353);
+      h = (h << 13) | (h >>> 19);
+    }
+    return function(){
+      h = Math.imul(h ^ (h >>> 16), 2246822507);
+      h = Math.imul(h ^ (h >>> 13), 3266489909);
+      return (h ^= h >>> 16) >>> 0;
+    }
+  }
+  function mulberry32(a){
+    return function(){
+      let t = a += 0x6D2B79F5;
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    }
+  }
+  function make(seedStr){
+    const seedFn = xmur3(seedStr);
+    return mulberry32(seedFn());
+  }
+  return { make };
+})();
+
+function clamp(n, a, b){ return Math.max(a, Math.min(b, n)); }
+function pick(rng, arr){ return arr[Math.floor(rng()*arr.length)]; }
+function pickN(rng, arr, n){
+  const copy = arr.slice();
+  const out = [];
+  for(let i=0;i<n && copy.length;i++){
+    const idx = Math.floor(rng()*copy.length);
+    out.push(copy.splice(idx,1)[0]);
+  }
+  return out;
+}
+function chance(rng, p){ return rng() < p; }
+function titleCase(s){ return s.replace(/\b\w/g, c => c.toUpperCase()); }
+
+function toast(msg){
+  els.toast.textContent = msg;
+  els.toast.classList.add("show");
+  setTimeout(() => els.toast.classList.remove("show"), 1400);
+}
+
+function escapeHtml(str){
+  return String(str)
+    .replaceAll("&","&amp;")
+    .replaceAll("<","&lt;")
+    .replaceAll(">","&gt;")
+    .replaceAll('"',"&quot;")
+    .replaceAll("'","&#039;");
+}
+function applyHighlight(html, needle){
+  const q = (needle || "").trim();
+  if(!q) return html;
+  const safe = q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const re = new RegExp(safe, "gi");
+  return html.replace(re, m => `<mark class="hl">${m}</mark>`);
+}
+
+function download(filename, content){
+  const blob = new Blob([content], {type:"text/plain;charset=utf-8"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href), 500);
+}
+
+/* ===== Data ===== */
+
+const RACES = [
+  { key:"", name:"Random" },
+  { key:"human", name:"Human", asi:{str:0,dex:0,con:0,int:0,wis:0,cha:1}, tags:["adaptable","cosmopolitan"], speed:30 },
+  { key:"elf", name:"Elf", asi:{dex:2,int:0,wis:1}, tags:["graceful","ancient"], speed:30, feature:"Fey Ancestry, Keen Senses" },
+  { key:"dwarf", name:"Dwarf", asi:{con:2,wis:1}, tags:["stout","stonewise"], speed:25, feature:"Dwarven Resilience" },
+  { key:"halfling", name:"Halfling", asi:{dex:2,cha:1}, tags:["lucky","nimble"], speed:25, feature:"Lucky" },
+  { key:"gnome", name:"Gnome", asi:{int:2,dex:1}, tags:["curious","clever"], speed:25, feature:"Gnome Cunning" },
+  { key:"half-elf", name:"Half-Elf", asi:{cha:2,dex:1,wis:1}, tags:["charming","between-worlds"], speed:30, feature:"Skill Versatility" },
+  { key:"half-orc", name:"Half-Orc", asi:{str:2,con:1}, tags:["intense","survivor"], speed:30, feature:"Relentless Endurance" },
+  { key:"tiefling", name:"Tiefling", asi:{cha:2,int:1}, tags:["infernal-heritage","magnetic"], speed:30, feature:"Hellish Resistance" },
+  { key:"dragonborn", name:"Dragonborn", asi:{str:2,cha:1}, tags:["draconic-pride","stately"], speed:30, feature:"Breath Weapon" },
+  { key:"orc", name:"Orc", asi:{str:2,con:1}, tags:["unyielding","direct"], speed:30, feature:"Aggressive" },
+  { key:"goliath", name:"Goliath", asi:{str:2,con:1}, tags:["towering","competitive"], speed:30, feature:"Stone's Endurance" },
+  { key:"aasimar", name:"Aasimar", asi:{cha:2,wis:1}, tags:["radiant","chosen"], speed:30, feature:"Celestial Revelation" },
+];
+
+const CLASSES = [
+  { key:"", name:"Random" },
+  { key:"commoner", name:"Commoner", pri:["con","wis"], sec:["cha"], prof:["Simple weapons"], role:["laborer","merchant","servant"] },
+  { key:"fighter", name:"Fighter", pri:["str","con"], sec:["dex"], prof:["All armor","Martial weapons"], role:["guard","soldier","duelist"] },
+  { key:"rogue", name:"Rogue", pri:["dex","int"], sec:["cha"], prof:["Light armor","Thieves' tools"], role:["scout","thief","spy"] },
+  { key:"wizard", name:"Wizard", pri:["int"], sec:["con","dex"], prof:["Daggers","Quarterstaff"], role:["scribe","sage","arcanist"] },
+  { key:"cleric", name:"Cleric", pri:["wis"], sec:["con","str"], prof:["Medium armor","Shields"], role:["priest","healer","inquisitor"] },
+  { key:"ranger", name:"Ranger", pri:["dex","wis"], sec:["con"], prof:["Light/Medium armor","Martial weapons"], role:["tracker","warden","hunter"] },
+  { key:"bard", name:"Bard", pri:["cha"], sec:["dex","int"], prof:["Light armor","Instruments"], role:["performer","diplomat","skald"] },
+  { key:"paladin", name:"Paladin", pri:["str","cha"], sec:["con"], prof:["All armor","Shields"], role:["knight","oathkeeper","templar"] },
+  { key:"druid", name:"Druid", pri:["wis"], sec:["con","dex"], prof:["Light/Medium (nonmetal)"], role:["hermit","grovekeeper","shaman"] },
+  { key:"monk", name:"Monk", pri:["dex","wis"], sec:["con"], prof:["Simple weapons","Unarmored defense"], role:["ascetic","martial artist","courier"] },
+  { key:"sorcerer", name:"Sorcerer", pri:["cha"], sec:["con","dex"], prof:["Daggers","Light crossbows"], role:["prodigy","mystic","wildmage"] },
+  { key:"warlock", name:"Warlock", pri:["cha"], sec:["con","dex"], prof:["Light armor","Simple weapons"], role:["occultist","agent","hexer"] },
+  { key:"barbarian", name:"Barbarian", pri:["str","con"], sec:["dex"], prof:["Light/Medium armor","Martial weapons"], role:["raider","tribal champion","mercenary"] },
+];
+
+const ALIGNMENTS = [
+  {a:"Lawful Good", w:1}, {a:"Neutral Good", w:1.2}, {a:"Chaotic Good", w:1},
+  {a:"Lawful Neutral", w:1}, {a:"True Neutral", w:1.2}, {a:"Chaotic Neutral", w:1},
+  {a:"Lawful Evil", w:0.9}, {a:"Neutral Evil", w:0.9}, {a:"Chaotic Evil", w:0.9},
+];
+
+const OCCUPATIONS = [
+  "apothecary assistant","archivist","armorer","baker","boatwright","bounty agent","cartographer",
+  "city watch officer","courier","dockworker","fence (illicit broker)","fisher","glassblower",
+  "gravekeeper","guild factor","herbalist","innkeeper","interpreter","jeweler","librarian",
+  "mason","mercenary","messenger","miner","midwife","miller","monster-hunter","peddler",
+  "scribe","ship's surgeon","smuggler","street preacher","tanner","teacher","undertaker",
+  "veteran","weaver","wine merchant"
+];
+
+const QUIRKS = [
+  "counts coins twice before paying","hums old marching songs","keeps immaculate notes","speaks in careful metaphors",
+  "stares a beat too long","laughs at their own jokes","never removes gloves","collects small bones or shells",
+  "refuses to sit with their back to a door","is overly polite to strangers","mispronounces common words",
+  "always smells faintly of smoke, herbs, or sea-salt","flips a lucky charm when thinking","whispers to animals"
+];
+
+const APPEARANCE = {
+  build:["wiry","lithe","broad-shouldered","stout","towering","compact","lean","soft-faced","scarred"],
+  face:["sharp cheekbones","a crooked nose","a freckled face","a weatherworn complexion","a faint burn scar","a calm, unreadable expression","a mischievous grin"],
+  hair:["braided hair","shaved sides","a topknot","wild curls","oiled and combed hair","a practical bun","hair streaked with gray","a hood always up"],
+  eyes:["bright green eyes","steel-gray eyes","honey-brown eyes","ink-dark eyes","pale, luminous eyes","one cloudy eye"],
+  style:["patched travel clothes","well-tailored attire","practical workwear","dusty leathers","ceremonial garments","a uniform with hidden repairs","robes with ink stains"],
+  detail:["a signet ring","a chipped holy symbol","a scar along the jaw","a tattoo of a constellation","calloused hands","a faint magical shimmer","mud-stained boots","a hidden dagger sheath"]
+};
+
+const PERSONALITY = {
+  traits:["cautious","bold","soft-spoken","sharp-tongued","patient","restless","devout","skeptical","curious","dutiful","vain","generous","ruthless","cheerful"],
+  ideals:["charity","freedom","order","knowledge","power","community","beauty","vengeance","honor","tradition","change","faith"],
+  bonds:["a sibling in trouble","a mentor they owe","a lost love","their hometown","a sacred oath","a secret patron","their crew or unit","a stolen heirloom","a promised debt"],
+  flaws:["quick to anger","cannot resist a wager","overconfident","terrible liar","holds grudges","easily distracted","fear of the dark","needs approval","reckless","secretly cowardly"]
+};
+
+const BACKSTORY_SEEDS = [
+  "survived a disaster and still hears it in dreams",
+  "learned a trade in a strict guild, then broke a rule",
+  "served in a border skirmish and came back changed",
+  "was raised by an unusual guardian and keeps it quiet",
+  "made a bargain they barely understood",
+  "found a map that doesn’t match any coastline",
+  "was accused of a crime they didn’t commit",
+  "inherited a small business with a hidden basement door",
+  "escaped a cult, but the cult hasn’t forgotten",
+  "owes their life to someone dangerous"
+];
+
+const SECRETS = [
+  "is an informant for a rival faction",
+  "is quietly hunting a specific monster",
+  "has a fake identity and a real name elsewhere",
+  "is cursed in a minor but escalating way",
+  "stole something magical and doesn’t know how to return it",
+  "is related to a local noble or crime boss",
+  "can read an ancient script no one else can",
+  "is protecting a runaway or hidden relic"
+];
+
+const PLOT_HOOKS = [
+  "needs discreet help retrieving a stolen item",
+  "offers a job escorting someone who lies about who they are",
+  "asks the party to investigate a vanished coworker",
+  "can introduce the party to a powerful contact—if they prove trustworthy",
+  "begs the party to clear their name before a hearing",
+  "has half of a key and needs the other half",
+  "saw something they shouldn’t have, and someone noticed"
+];
+
+const GEAR_COMMON = [
+  "a sturdy cloak","a small pouch of spices","chalk and twine","a folded letter with no signature",
+  "a flask of bitter tea","a whetstone","a tin locket","a local street map","a waterskin","a pocket journal"
+];
+
+const SPELL_FLAVOR = {
+  wizard:["ritual circles","precise sigils","inked diagrams"],
+  cleric:["prayers","radiant hymns","symbol-lit miracles"],
+  druid:["living vines","animal whispers","earth-scented magic"],
+  sorcerer:["raw surges","glittering arcs","unsteady power"],
+  warlock:["shadow contracts","whispered names","eldritch marks"],
+  bard:["resonant chords","poetic commands","enchanted refrains"],
+};
+
+const NAMES = {
+  human:["Arin","Bryn","Cora","Dain","Elowen","Faris","Garrick","Hale","Iria","Joren","Kael","Lysa","Mara","Nolan","Orin","Perrin","Quinn","Rowan","Sable","Tamsin","Varric","Wren"],
+  elf:["Aelar","Caelynn","Erevan","Lirael","Myriil","Naeris","Syllin","Thamior","Velas","Zereni"],
+  dwarf:["Brom","Dagna","Elda","Fargrim","Gimli","Hilda","Korgan","Riswynn","Thrain","Vistra"],
+  halfling:["Alton","Bree","Cade","Daisy","Eldon","Fenn","Kithri","Lyle","Milo","Poppy"],
+  gnome:["Bimpnottin","Ellywick","Fonkin","Lilli","Nim","Orla","Quill","Rolo","Tink","Warryn"],
+  "half-elf":["Ari","Cyran","Elira","Jace","Kallia","Lorin","Mira","Nerys","Seren","Thalen"],
+  "half-orc":["Drog","Grena","Hruk","Korga","Mog","Nura","Ront","Shura","Tark","Ugra"],
+  tiefling:["Akmenos","Bryseis","Damaia","Kallista","Leucis","Mephis","Nerissa","Orianna","Rieta","Zor"],
+  dragonborn:["Arjhan","Balasar","Daar","Kava","Kriv","Mehen","Mishann","Nala","Rhogar","Sora"],
+  orc:["Brakka","Dura","Gorn","Hesha","Krag","Mura","Ruga","Sharn","Thok","Yagra"],
+  goliath:["Aukan","Gauthak","Kavaki","Manneo","Nalla","Orilo","Pavak","Thuunlakalaga","Vimak","Zalathar"],
+  aasimar:["Astra","Cassiel","Elyra","Ithuriel","Lumen","Mirael","Nahia","Oria","Seraph","Valen"]
+};
+const SURNAMES = [
+  "Thorne","Hawke","Stone","Rivermark","Ashford","Duskwood","Brightwater","Keen","Blackwell","Ironroot",
+  "Sable","Glimmer","Redfern","Marrow","Vintner","Coppers","Farwind","Proudmoore","Greycloak","Hearth"
+];
+
+/* ===== Tier presets ===== */
+const TIERS = {
+  commoner: { lvl:[0,1], prof:2, hp:[4,10], ac:[10,13], dmgDie:"1d4", att:1 },
+  low:      { lvl:[1,3], prof:2, hp:[9,24], ac:[12,15], dmgDie:"1d6", att:1 },
+  mid:      { lvl:[4,7], prof:3, hp:[22,55], ac:[13,17], dmgDie:"1d8", att:2 },
+  high:     { lvl:[8,12],prof:4, hp:[50,95], ac:[14,18], dmgDie:"1d10",att:2 },
+  elite:    { lvl:[13,16],prof:5, hp:[80,140],ac:[15,19], dmgDie:"2d6", att:3 },
+  random:   null
+};
+
+function weightedPick(rng, items){
+  const total = items.reduce((s,x)=>s+x.w,0);
+  let r = rng()*total;
+  for(const it of items){
+    r -= it.w;
+    if(r<=0) return it.a;
+  }
+  return items[items.length-1].a;
+}
+
+function rollRange(rng, a, b){
+  return Math.floor(rng()*(b-a+1))+a;
+}
+
+/* ===== Ability score generation ===== */
+const ABILS = ["str","dex","con","int","wis","cha"];
+const ABIL_NAMES = {str:"STR",dex:"DEX",con:"CON",int:"INT",wis:"WIS",cha:"CHA"};
+
+function modFromScore(score){ return Math.floor((score-10)/2); }
+
+function genBaseScores(rng, tierKey, cls){
+  // Start from point-buy-ish baselines, then bias toward class primaries.
+  let base;
+  if(tierKey==="commoner") base = [12,11,11,10,10,9];
+  else if(tierKey==="low") base = [14,13,12,11,10,10];
+  else if(tierKey==="mid") base = [15,14,13,12,11,10];
+  else if(tierKey==="high") base = [16,15,14,12,12,10];
+  else if(tierKey==="elite") base = [17,16,15,13,12,10];
+  else base = [14,13,12,11,10,10];
+
+  // Shuffle base array
+  base = pickN(rng, base, base.length);
+
+  // Map by priority: primary stats get highest values.
+  const pri = (cls?.pri || []).slice();
+  const sec = (cls?.sec || []).slice();
+
+  // Build ordering with fallback
+  const ordering = [];
+  for(const s of pri) if(!ordering.includes(s)) ordering.push(s);
+  for(const s of sec) if(!ordering.includes(s)) ordering.push(s);
+  for(const s of ABILS) if(!ordering.includes(s)) ordering.push(s);
+
+  const scores = {str:10,dex:10,con:10,int:10,wis:10,cha:10};
+  const sorted = base.slice().sort((a,b)=>b-a);
+
+  // Assign best values to ordering in sequence
+  for(let i=0;i<ordering.length;i++){
+    scores[ordering[i]] = sorted[i] ?? 10;
+  }
+
+  // Small random jitter
+  for(const a of ABILS){
+    if(chance(rng, 0.35)){
+      scores[a] = clamp(scores[a] + (chance(rng,0.5)?1:-1), 6, 20);
+    }
+  }
+  return scores;
+}
+
+function applyRaceASI(scores, race){
+  if(!race || !race.asi) return scores;
+  const out = {...scores};
+  for(const k of Object.keys(race.asi)){
+    out[k] = clamp((out[k] ?? 10) + race.asi[k], 1, 20);
+  }
+  return out;
+}
+
+function deriveHPAC(rng, tierKey, cls, scores){
+  const t = TIERS[tierKey] ?? TIERS.low;
+  const conMod = modFromScore(scores.con);
+  const baseHP = rollRange(rng, t.hp[0], t.hp[1]) + conMod * Math.max(1, (t.lvl ? t.lvl[1] : 3));
+  let ac = rollRange(rng, t.ac[0], t.ac[1]);
+
+  // Class flavor adjustments
+  const cKey = cls?.key || "";
+  if(["fighter","paladin"].includes(cKey)) ac += 1;
+  if(["barbarian","monk"].includes(cKey)) ac += 0; // unarmored variants, keep baseline
+  if(["wizard","sorcerer","warlock"].includes(cKey)) ac -= 1;
+  if(["rogue","ranger","bard"].includes(cKey)) ac += 0;
+
+  ac = clamp(ac, 10, 22);
+
+  return { hp: Math.max(2, baseHP), ac };
+}
+
+function calcAttackBonus(tierKey, prof, abilityMod){
+  // quick approximation: prof + relevant ability mod
+  return prof + abilityMod;
+}
+
+function saveDC(prof, abilityMod){
+  return 8 + prof + abilityMod;
+}
+
+/* ===== Text generation helpers ===== */
+
+function randomName(rng, raceKey){
+  const pool = NAMES[raceKey] || NAMES.human;
+  const first = pick(rng, pool);
+  const last = pick(rng, SURNAMES);
+  // Sometimes single-name (esp. goliath / orc)
+  if(["goliath","orc"].includes(raceKey) && chance(rng, 0.35)) return first;
+  return `${first} ${last}`;
+}
+
+function pronounSet(rng, selected){
+  const val = selected || pick(rng, ["they/them","she/her","he/him"]);
+  const [sub,obj] = val.split("/");
+  // possessive rough rules
+  const poss = (val==="he/him") ? "his" : (val==="she/her") ? "her" : "their";
+  const refl = (val==="he/him") ? "himself" : (val==="she/her") ? "herself" : "themself";
+  return { raw: val, sub, obj, poss, refl };
+}
+
+function compactJoin(parts){
+  return parts.filter(Boolean).join(" ");
+}
+
+function sentenceize(s){
+  if(!s) return s;
+  return s[0].toUpperCase() + s.slice(1).replace(/\s+$/,"") + (/[.!?]$/.test(s.trim()) ? "" : ".");
+}
+
+function buildAppearance(rng, race, tone){
+  const a = APPEARANCE;
+  const pieces = [
+    `A ${pick(rng, a.build)} figure with ${pick(rng, a.face)}.`,
+    `${titleCase(pick(rng, a.hair))} frames ${pick(rng, a.eyes)}.`,
+    `Wears ${pick(rng, a.style)} and carries ${pick(rng, a.detail)}.`
+  ];
+  // Race seasoning
+  if(race?.key==="dwarf") pieces.push("Their presence is grounded—solid as old stone.");
+  if(race?.key==="elf") pieces.push("They move like a practiced dancer, too quiet for their own good.");
+  if(race?.key==="tiefling") pieces.push("A subtle heat clings to them, like air above sun-baked rock.");
+  if(tone==="Comedic" && chance(rng, 0.6)) pieces.push("Something about them is unmistakably, inconveniently dramatic.");
+  if(tone==="Horror-tinged" && chance(rng, 0.6)) pieces.push("When they blink, it feels like the room forgets to breathe.");
+  return pieces;
+}
+
+function makeBackstory(rng, npc){
+  const {tone, region, cls, race, pron} = npc;
+  const seed = pick(rng, BACKSTORY_SEEDS);
+  const quirk = pick(rng, QUIRKS);
+  const bond = npc.bond;
+  const ideal = npc.ideal;
+  const flaw = npc.flaw;
+
+  const regionBeat = region ? `In the ${region.toLowerCase()},` : "Once,";
+  const classBeat = cls?.key && cls.key!=="commoner"
+    ? `they learned to survive as a ${cls.name.toLowerCase()},`
+    : `they learned to survive,`;
+  const raceBeat = race?.key && race.key!=="human"
+    ? `a ${race.name.toLowerCase()} navigating other people’s expectations,`
+    : `trying to stay one step ahead of trouble,`;
+
+  const toneBeat =
+    tone==="Heroic" ? "and still believes doing the right thing matters."
+    : tone==="Gritty" ? "and knows the world pays in scars before it pays in coin."
+    : tone==="Mysterious" ? "and keeps the most important details locked behind a smile."
+    : tone==="Comedic" ? "and somehow turns disasters into anecdotes."
+    : tone==="Horror-tinged" ? "and carries a quiet dread like a second shadow."
+    : "and tries to make choices they can live with.";
+
+  const lines = [
+    `${regionBeat} ${pron.sub} ${seed}; ${classBeat} ${raceBeat} ${toneBeat}`,
+    `${pron.sub[0].toUpperCase()+pron.sub.slice(1)} values ${ideal} above all, and is tied to ${bond}.`,
+    `A habit: ${quirk}. A weakness: ${flaw}.`
+  ];
+
+  // Optional note integration
+  if(npc.notes){
+    lines.push(`Constraint/rumor: ${npc.notes.trim().replace(/\.$/,"")}.`);
+  }
+
+  return lines.map(sentenceize);
+}
+
+function makePersonality(rng, compact=false){
+  const traitA = pick(rng, PERSONALITY.traits);
+  let traitB = pick(rng, PERSONALITY.traits);
+  if(traitB===traitA) traitB = pick(rng, PERSONALITY.traits);
+  const ideal = pick(rng, PERSONALITY.ideals);
+  const bond = pick(rng, PERSONALITY.bonds);
+  const flaw = pick(rng, PERSONALITY.flaws);
+
+  const out = { traitA, traitB, ideal, bond, flaw };
+  const text = compact
+    ? `Traits: ${traitA}, ${traitB}. Ideal: ${ideal}. Bond: ${bond}. Flaw: ${flaw}.`
+    : `Traits: ${traitA} and ${traitB}. Ideal: ${ideal}. Bond: ${bond}. Flaw: ${flaw}.`;
+  return { ...out, text };
+}
+
+function suggestSignature(rng, clsKey, scores){
+  const dex = modFromScore(scores.dex), str = modFromScore(scores.str), wis = modFromScore(scores.wis),
+        intm = modFromScore(scores.int), cha = modFromScore(scores.cha);
+  const best = ABILS.slice().sort((a,b)=>modFromScore(scores[b])-modFromScore(scores[a]))[0];
+
+  const melee = str>=dex ? "melee" : "finesse";
+  const lists = {
+    fighter: ["Shield Bash", "Disarming Strike", "Goading Shout", "Riposte"],
+    rogue: ["Sneak Attack Setup", "Pocket Sand", "Caltrops & Escape", "Blackmail Whisper"],
+    wizard: ["Arcane Warding Sigil", "Sleep Hex", "Force Push", "Illusory Double"],
+    cleric: ["Radiant Rebuke", "Blessing Chant", "Turn the Unholy", "Healing Word Burst"],
+    ranger: ["Marked Shot", "Snare Trap", "Beast Command", "Terrain Ambush"],
+    bard: ["Cutting Remark", "Rallying Verse", "Glamour Step", "Enthralling Chorus"],
+    paladin: ["Smite Oathstrike", "Aegis Vow", "Divine Challenge", "Lay on Hands Surge"],
+    druid: ["Thorn Lash", "Fog Veil", "Wild Shape Feint", "Entangling Roots"],
+    monk: ["Stunning Palm", "Flowing Step", "Deflect & Counter", "Pressure Point"],
+    sorcerer: ["Surge Bolt", "Wild Twist", "Twin Spark", "Burning Pulse"],
+    warlock: ["Eldritch Grasp", "Hexbrand", "Pact Command", "Shadow Snare"],
+    barbarian: ["Rage Rush", "Reckless Cleave", "Intimidating Roar", "Grapple Crush"],
+    commoner: ["Desperate Swing", "Hide Behind Cover", "Throw Sand", "Plead for Mercy"],
+  };
+  let pickList = lists[clsKey] || lists.commoner;
+  let sig = pick(rng, pickList);
+
+  // best-stat seasoning
+  if(best==="int") sig += " (tactical)";
+  if(best==="wis") sig += " (keen-eyed)";
+  if(best==="cha") sig += " (commanding)";
+
+  // melee vs finesse flavor
+  if(["fighter","paladin","barbarian"].includes(clsKey) && melee==="finesse") sig += " (unexpectedly precise)";
+  if(["rogue","ranger","monk"].includes(clsKey) && melee==="melee") sig += " (brutal close-in)";
+
+  return sig;
+}
+
+function makeLanguages(rng, raceKey){
+  const common = ["Common"];
+  const extra = ["Elvish","Dwarvish","Halfling","Gnomish","Orc","Draconic","Infernal","Celestial","Sylvan","Undercommon"];
+  const count = (raceKey && raceKey!=="human") ? (chance(rng,0.7)?2:3) : (chance(rng,0.6)?2:1);
+  const picks = pickN(rng, extra, count-1);
+  return common.concat(picks);
+}
+
+function pickRace(rng, key){
+  if(!key) return pick(rng, RACES.slice(1));
+  return RACES.find(r=>r.key===key) || pick(rng, RACES.slice(1));
+}
+function pickClass(rng, key){
+  if(!key) return pick(rng, CLASSES.slice(1));
+  return CLASSES.find(c=>c.key===key) || pick(rng, CLASSES.slice(1));
+}
+
+function tierFromInput(rng, tierKey){
+  if(tierKey!=="random") return tierKey;
+  const keys = ["commoner","low","mid","high","elite"];
+  return pick(rng, keys);
+}
+
+function impliedRole(rng, cls){
+  const roles = cls?.role || ["wanderer","laborer"];
+  return pick(rng, roles);
+}
+
+function alignmentFromNudge(rng, nudge){
+  // nudge: -1 darker, +1 kinder, 0 neutral
+  let pool = ALIGNMENTS.map(x=>({...x}));
+  for(const it of pool){
+    if(nudge>0 && it.a.includes("Good")) it.w *= 1.45;
+    if(nudge>0 && it.a.includes("Evil")) it.w *= 0.55;
+    if(nudge<0 && it.a.includes("Evil")) it.w *= 1.45;
+    if(nudge<0 && it.a.includes("Good")) it.w *= 0.55;
+    if(it.a.includes("Neutral")) it.w *= 1.1;
+  }
+  return weightedPick(rng, pool);
+}
+
+/* ===== Statblock render ===== */
+
+function formatAbilities(scores){
+  const parts = ABILS.map(a => {
+    const sc = scores[a];
+    const m = modFromScore(sc);
+    const sign = m>=0 ? "+" : "";
+    return `${ABIL_NAMES[a]} ${sc} (${sign}${m})`;
+  });
+  return parts.join("  ");
+}
+
+function formatSkills(rng, clsKey, prof, scores){
+  // quick skill picks based on class; not exhaustive
+  const SK = {
+    fighter:["Athletics","Intimidation","Perception"],
+    rogue:["Stealth","Sleight of Hand","Deception","Investigation"],
+    wizard:["Arcana","History","Investigation"],
+    cleric:["Insight","Medicine","Religion"],
+    ranger:["Survival","Nature","Perception","Stealth"],
+    bard:["Persuasion","Deception","Performance","Insight"],
+    paladin:["Athletics","Persuasion","Insight"],
+    druid:["Nature","Animal Handling","Survival","Medicine"],
+    monk:["Acrobatics","Stealth","Insight"],
+    sorcerer:["Deception","Intimidation","Arcana"],
+    warlock:["Arcana","Deception","Intimidation"],
+    barbarian:["Athletics","Survival","Intimidation"],
+    commoner:["Perception","Insight"]
+  };
+  const list = SK[clsKey] || ["Perception","Insight"];
+  const chosen = pickN(rng, list, Math.min(3, list.length));
+  const mods = {
+    Athletics: modFromScore(scores.str),
+    Acrobatics: modFromScore(scores.dex),
+    Stealth: modFromScore(scores.dex),
+    "Sleight of Hand": modFromScore(scores.dex),
+    Investigation: modFromScore(scores.int),
+    Arcana: modFromScore(scores.int),
+    History: modFromScore(scores.int),
+    Nature: modFromScore(scores.int),
+    Religion: modFromScore(scores.int),
+    Insight: modFromScore(scores.wis),
+    Medicine: modFromScore(scores.wis),
+    Perception: modFromScore(scores.wis),
+    Survival: modFromScore(scores.wis),
+    Performance: modFromScore(scores.cha),
+    Persuasion: modFromScore(scores.cha),
+    Deception: modFromScore(scores.cha),
+    Intimidation: modFromScore(scores.cha),
+    "Animal Handling": modFromScore(scores.wis),
+  };
+  return chosen.map(s => {
+    const bonus = prof + (mods[s] ?? 0);
+    const sign = bonus>=0?"+":"";
+    return `${s} ${sign}${bonus}`;
+  }).join(", ");
+}
+
+function makeAttacks(rng, npc){
+  const {cls, tierKey, prof, scores} = npc;
+  const cKey = cls.key;
+  const dex = modFromScore(scores.dex);
+  const str = modFromScore(scores.str);
+
+  let atkStat = "str";
+  let weapon = "weapon";
+  let damageDie = TIERS[tierKey]?.dmgDie ?? "1d6";
+
+  if(["rogue","ranger","monk","bard"].includes(cKey)) { atkStat = (dex>=str) ? "dex" : "str"; weapon = (atkStat==="dex") ? "Shortsword or Dagger" : "Club or Shortsword"; }
+  if(["fighter","paladin","barbarian"].includes(cKey)) { atkStat = (str>=dex) ? "str" : "dex"; weapon = (atkStat==="str") ? "Longsword or Axe" : "Rapier"; }
+  if(["wizard","sorcerer","warlock","cleric","druid"].includes(cKey)) { atkStat = (cKey==="wizard")?"int": (cKey==="cleric"||cKey==="druid")?"wis":"cha"; weapon = "Spell Attack"; }
+
+  const abilMod = modFromScore(scores[atkStat]);
+  const toHit = calcAttackBonus(tierKey, prof, abilMod);
+  const sign = toHit>=0?"+":"";
+
+  const dmgMod = abilMod;
+  const dmgSign = dmgMod>=0?"+":"";
+  let line = "";
+
+  if(weapon==="Spell Attack"){
+    const dc = saveDC(prof, abilMod);
+    const flavor = SPELL_FLAVOR[cKey] ? pick(rng, SPELL_FLAVOR[cKey]) : "mystic gestures";
+    const effect = pick(rng, ["force","radiant","necrotic","fire","cold","thunder","psychic","poison"]);
+    line = `Spell Attack: +${toHit} to hit, range 60 ft., one target. Hit: ${damageDie} ${dmgSign}${dmgMod} ${effect} damage. (Save DC ${dc} for a secondary effect; described as ${flavor}.)`;
+  } else {
+    const extra = (cKey==="rogue" && (tierKey==="mid"||tierKey==="high"||tierKey==="elite")) ? " plus 1d6 sneak damage if an ally threatens the target" : "";
+    line = `${weapon}: ${sign}${toHit} to hit, reach 5 ft. or range 20/60, one target. Hit: ${damageDie} ${dmgSign}${dmgMod} damage.${extra}`;
+  }
+
+  // Multiattack for higher tiers
+  const att = TIERS[tierKey]?.att ?? 1;
+  if(att>=2 && chance(rng,0.65)){
+    return `Multiattack: makes ${att} attacks.\n- ${line}`;
+  }
+  return `- ${line}`;
+}
+
+function makeFeatures(rng, npc){
+  const {race, cls, tierKey, scores} = npc;
+  const out = [];
+  if(race?.feature) out.push(race.feature);
+
+  const cKey = cls.key;
+  if(cKey==="rogue") out.push("Cunning Action (1/turn): Dash, Disengage, or Hide as a bonus action.");
+  if(cKey==="fighter" && (tierKey==="mid"||tierKey==="high"||tierKey==="elite")) out.push("Second Wind (1/short rest): regain 1d10 + level HP.");
+  if(cKey==="cleric") out.push("Channel Divinity (1/rest): a thematic turn/boon suited to their faith.");
+  if(cKey==="wizard") out.push("Ritual Savant: can cast simple rituals without expending power.");
+  if(cKey==="barbarian") out.push("Rage (2/day): advantage on STR checks/saves, +2 damage, resistance to bludgeoning/piercing/slashing.");
+  if(cKey==="paladin") out.push("Divine Sense: detects celestials/fiends/undead nearby.");
+  if(cKey==="ranger") out.push("Hunter’s Focus: marks a target to track and pressure.");
+  if(cKey==="bard") out.push("Inspiration (2/day): grant 1d6 to an ally’s roll.");
+  if(cKey==="warlock") out.push("Pact Gift: a minor boon from an otherworldly patron.");
+  if(cKey==="druid") out.push("Nature’s Aid: call small beasts or plants for help.");
+  if(cKey==="monk") out.push("Ki Techniques: Flurry of Blows / Patient Defense / Step of the Wind.");
+  if(cKey==="sorcerer") out.push("Metamagic Quirk: a small twist on spell shape or intensity.");
+
+  // Signature move suggestion
+  out.push(`Signature Move: ${suggestSignature(rng, cKey, scores)}.`);
+
+  return out;
+}
+
+function makeGear(rng, npc){
+  const {cls, tierKey} = npc;
+  const items = [];
+  items.push(pick(rng, GEAR_COMMON));
+  items.push(pick(rng, GEAR_COMMON));
+
+  const cKey = cls.key;
+  if(["fighter","paladin"].includes(cKey)) items.push(pick(rng, ["a battered shield","a whetted blade","a spare helm","a military insignia"]));
+  if(["rogue"].includes(cKey)) items.push(pick(rng, ["lockpicks","a dark hood","a vial of oil","a coil of thin rope"]));
+  if(["wizard","sorcerer","warlock"].includes(cKey)) items.push(pick(rng, ["a focus crystal","a spellbook (or notes)","a pact token","a pouch of ash and salt"]));
+  if(["cleric","druid"].includes(cKey)) items.push(pick(rng, ["a holy symbol","herb satchel","a carved totem","a small offering bowl"]));
+  if(["ranger"].includes(cKey)) items.push(pick(rng, ["a hunting trap","a worn compass","fletching kit","a trophy fang"]));
+  if(["bard"].includes(cKey)) items.push(pick(rng, ["an instrument","stage makeup","a fan of calling cards","a ribboned keepsake"]));
+  if(["monk"].includes(cKey)) items.push(pick(rng, ["prayer beads","handwraps","a bamboo flute","a tea tin"]));
+  if(["barbarian"].includes(cKey)) items.push(pick(rng, ["a charm of teeth","a heavy cloak","a whetstone","a small keg tap"]));
+
+  if(tierKey==="elite" && chance(rng,0.6)) items.push(pick(rng, ["a minor magic trinket","a sealed writ of authority","a pouch of gemstones","a map to a hidden cache"]));
+
+  return items;
+}
+
+/* ===== Main generation ===== */
+
+let CURRENT = null;
+
+function makeSeed(){
+  // simple seed based on time + randomness
+  return (Date.now().toString(36) + "-" + Math.random().toString(36).slice(2,8)).toUpperCase();
+}
+
+function buildNPC(seed, options, nudge=0){
+  const rng = RNG.make(seed);
+  const race = pickRace(rng, options.raceKey);
+  const cls = pickClass(rng, options.classKey);
+
+  const tierKey = tierFromInput(rng, options.tierKey);
+  const tier = TIERS[tierKey] ?? TIERS.low;
+
+  const pron = pronounSet(rng, options.pronouns);
+  const name = options.name?.trim() ? options.name.trim() : randomName(rng, race.key || "human");
+
+  const compact = !!options.compact;
+  const region = options.region || (chance(rng,0.75) ? pick(rng, [
+    "Cosmopolitan City","Frontier Town","Ancient Empire","Desert Kingdoms","Frozen North",
+    "Island Archipelago","Deep Forest Realms","Mountain Holds","Underdark Fringe","Planar Crossroads"
+  ]) : "");
+  const tone = options.tone || (chance(rng,0.7) ? pick(rng, ["Grounded","Heroic","Gritty","Mysterious","Comedic","Horror-tinged"]) : "Grounded");
+
+  // Alignment with nudges
+  const alignment = alignmentFromNudge(rng, nudge);
+
+  // Personality
+  const p = makePersonality(rng, compact);
+
+  // Occupation: class-influenced
+  const implied = impliedRole(rng, cls);
+  let occupation = chance(rng,0.65) ? implied : pick(rng, OCCUPATIONS);
+  if(cls.key==="commoner" && chance(rng,0.5)) occupation = pick(rng, OCCUPATIONS);
+
+  // Ability scores
+  let scores = genBaseScores(rng, tierKey, cls);
+  scores = applyRaceASI(scores, race);
+
+  // Proficiency bonus
+  const prof = tier.prof ?? 2;
+
+  // HP/AC
+  const {hp, ac} = deriveHPAC(rng, tierKey, cls, scores);
+
+  // Speed & senses
+  const speed = race.speed ?? 30;
+  const passivePerception = 10 + modFromScore(scores.wis) + (chance(rng,0.3)?prof:0);
+  const languages = makeLanguages(rng, race.key || "human");
+
+  // Features, attacks, skills
+  const skills = formatSkills(rng, cls.key, prof, scores);
+  const features = makeFeatures(rng, {race, cls, tierKey, scores, prof});
+  const attacks = makeAttacks(rng, {cls, tierKey, prof, scores});
+
+  // Appearance & backstory
+  const notes = options.notes?.trim() || "";
+  const npcForStory = {tone, region, cls, race, pron, ideal:p.ideal, bond:p.bond, flaw:p.flaw, notes};
+  const appearance = buildAppearance(rng, race, tone);
+  const backstory = makeBackstory(rng, npcForStory);
+
+  // Plot bits
+  const secret = pick(rng, SECRETS);
+  const hook = pick(rng, PLOT_HOOKS);
+
+  // Gear
+  const gear = makeGear(rng, {cls, tierKey});
+
+  // Derived “statblock-ish” fields
+  const init = modFromScore(scores.dex);
+  const dc = saveDC(prof, modFromScore(scores[cls.pri?.[0] || "wis"]));
+
+  // Create NPC object
+  const npc = {
+    seed, name, pronouns:pron.raw, race: race.name, raceKey: race.key,
+    class: cls.name, classKey: cls.key, tierKey,
+    region, tone, alignment, occupation,
+    personality: { traitA:p.traitA, traitB:p.traitB, ideal:p.ideal, bond:p.bond, flaw:p.flaw },
+    appearance, backstory,
+    stats: { ac, hp, speed, prof, init, passivePerception, dc, abilities:scores, skills },
+    features, attacks,
+    languages,
+    secret, hook,
+    gear,
+  };
+  return npc;
+}
+
+/* ===== Rendering ===== */
+
+function formatAbilities(scores){
+  const parts = ABILS.map(a => {
+    const sc = scores[a];
+    const m = modFromScore(sc);
+    const sign = m>=0 ? "+" : "";
+    return `${ABIL_NAMES[a]} ${sc} (${sign}${m})`;
+  });
+  return parts.join("  ");
+}
+
+function renderMD(npc, opts){
+  const compact = !!opts.compact;
+  const pron = npc.pronouns;
+  const lines = [];
+
+  lines.push(`# ${npc.name}`);
+  lines.push(`*${npc.race} ${npc.class}* — **${npc.occupation}**`);
+  lines.push(`**Alignment:** ${npc.alignment}  •  **Region:** ${npc.region || "—"}  •  **Tone:** ${npc.tone || "—"}  •  **Pronouns:** ${pron}`);
+  lines.push(``);
+  lines.push(`## Description`);
+  if(compact){
+    lines.push(`- ${npc.appearance.join(" ")}`);
+  } else {
+    for(const s of npc.appearance) lines.push(`- ${s}`);
+  }
+  lines.push(``);
+  lines.push(`## Personality`);
+  lines.push(`- Traits: ${npc.personality.traitA}, ${npc.personality.traitB}`);
+  lines.push(`- Ideal: ${npc.personality.ideal}`);
+  lines.push(`- Bond: ${npc.personality.bond}`);
+  lines.push(`- Flaw: ${npc.personality.flaw}`);
+  lines.push(``);
+  lines.push(`## Backstory`);
+  if(compact){
+    lines.push(npc.backstory.join(" "));
+  } else {
+    for(const s of npc.backstory) lines.push(`- ${s}`);
+  }
+  lines.push(``);
+  lines.push(`## Statblock (quick)`);
+  lines.push(`- **AC** ${npc.stats.ac}  •  **HP** ${npc.stats.hp}  •  **Speed** ${npc.stats.speed} ft.`);
+  lines.push(`- **Init** ${npc.stats.init>=0?"+":""}${npc.stats.init}  •  **PB** +${npc.stats.prof}  •  **Passive Perception** ${npc.stats.passivePerception}`);
+  lines.push(`- **Abilities:** ${formatAbilities(npc.stats.abilities)}`);
+  lines.push(`- **Skills:** ${npc.stats.skills}`);
+  lines.push(`- **Languages:** ${npc.languages.join(", ")}`);
+  lines.push(``);
+  lines.push(`### Features`);
+  for(const f of npc.features) lines.push(`- ${f}`);
+  lines.push(``);
+  lines.push(`### Actions`);
+  lines.push(npc.attacks);
+  lines.push(``);
+  if(opts.includeGear){
+    lines.push(`## Gear / Loot Hooks`);
+    lines.push(`- ${npc.gear.join(", ")}`);
+    lines.push(``);
+  }
+  if(opts.includePlot){
+    lines.push(`## Secrets & Hooks`);
+    lines.push(`- **Secret:** ${npc.secret}`);
+    lines.push(`- **Hook:** ${npc.hook}`);
+    lines.push(``);
+  }
+  lines.push(`---`);
+  lines.push(`Seed: \`${npc.seed}\``);
+
+  return lines.join("\n");
+}
+
+function renderHTML(npc, opts){
+  const abil = npc.stats.abilities;
+  const fmtMod = (n) => (n>=0?`+${n}`:`${n}`);
+
+  const head = `
+    <div class="npcHead">
+      <div>
+        <h2>${escapeHtml(npc.name)}</h2>
+        <div class="meta">${escapeHtml(npc.race)} ${escapeHtml(npc.class)} — ${escapeHtml(npc.occupation)}</div>
+      </div>
+      <div class="pills">
+        <span class="pill2">${escapeHtml(npc.alignment)}</span>
+        ${npc.region ? `<span class="pill2">${escapeHtml(npc.region)}</span>` : ``}
+        ${npc.tone ? `<span class="pill2">${escapeHtml(npc.tone)}</span>` : ``}
+        <span class="pill2">Pronouns: ${escapeHtml(npc.pronouns)}</span>
+      </div>
+    </div>
+  `;
+
+  const stats = `
+    <div class="sec">
+      <h3>Statblock (quick)</h3>
+      <div class="statgrid">
+        <div class="stat"><div class="k">AC</div><div class="v">${npc.stats.ac}</div></div>
+        <div class="stat"><div class="k">HP</div><div class="v">${npc.stats.hp}</div></div>
+        <div class="stat"><div class="k">Speed</div><div class="v">${npc.stats.speed} ft.</div></div>
+        <div class="stat"><div class="k">Initiative</div><div class="v">${fmtMod(npc.stats.init)}</div></div>
+        <div class="stat"><div class="k">Proficiency Bonus</div><div class="v">+${npc.stats.prof}</div></div>
+        <div class="stat"><div class="k">Passive Perception</div><div class="v">${npc.stats.passivePerception}</div></div>
+      </div>
+      <div class="hr" style="margin:10px 0;"></div>
+      <div class="mono" style="color:var(--muted); font-size:12px;">
+        <div><b>Abilities:</b> STR ${abil.str} (${fmtMod(Math.floor((abil.str-10)/2))}) · DEX ${abil.dex} (${fmtMod(Math.floor((abil.dex-10)/2))}) · CON ${abil.con} (${fmtMod(Math.floor((abil.con-10)/2))}) · INT ${abil.int} (${fmtMod(Math.floor((abil.int-10)/2))}) · WIS ${abil.wis} (${fmtMod(Math.floor((abil.wis-10)/2))}) · CHA ${abil.cha} (${fmtMod(Math.floor((abil.cha-10)/2))})</div>
+        <div style="margin-top:6px;"><b>Skills:</b> ${escapeHtml(npc.stats.skills)}</div>
+        <div style="margin-top:6px;"><b>Languages:</b> ${escapeHtml(npc.languages.join(", "))}</div>
+      </div>
+    </div>
+  `;
+
+  const desc = `
+    <div class="sec">
+      <h3>Description</h3>
+      <ul>${npc.appearance.map(x => `<li>${escapeHtml(x)}</li>`).join("")}</ul>
+    </div>
+  `;
+
+  const pers = `
+    <div class="sec">
+      <h3>Personality</h3>
+      <ul>
+        <li><b>Traits:</b> ${escapeHtml(npc.personality.traitA)}, ${escapeHtml(npc.personality.traitB)}</li>
+        <li><b>Ideal:</b> ${escapeHtml(npc.personality.ideal)}</li>
+        <li><b>Bond:</b> ${escapeHtml(npc.personality.bond)}</li>
+        <li><b>Flaw:</b> ${escapeHtml(npc.personality.flaw)}</li>
+      </ul>
+    </div>
+  `;
+
+  const story = `
+    <div class="sec">
+      <h3>Backstory</h3>
+      <ul>${npc.backstory.map(x => `<li>${escapeHtml(x)}</li>`).join("")}</ul>
+    </div>
+  `;
+
+  const feats = `
+    <div class="sec">
+      <h3>Features</h3>
+      <ul>${npc.features.map(x => `<li>${escapeHtml(x)}</li>`).join("")}</ul>
+    </div>
+  `;
+
+  const actions = `
+    <div class="sec">
+      <h3>Actions</h3>
+      <div class="mono" style="white-space:pre-wrap;">${escapeHtml(npc.attacks)}</div>
+    </div>
+  `;
+
+  const extras = [];
+  if(opts.includeGear){
+    extras.push(`
+      <div class="sec">
+        <h3>Gear / Loot Hooks</h3>
+        <ul><li>${escapeHtml(npc.gear.join(", "))}</li></ul>
+      </div>
+    `);
+  }
+  if(opts.includePlot){
+    extras.push(`
+      <div class="sec">
+        <h3>Secrets & Hooks</h3>
+        <ul>
+          <li><b>Secret:</b> ${escapeHtml(npc.secret)}</li>
+          <li><b>Hook:</b> ${escapeHtml(npc.hook)}</li>
+        </ul>
+      </div>
+    `);
+  }
+
+  const repro = `
+    <div class="sec">
+      <h3>Repro</h3>
+      <div class="mono" style="color:var(--muted); font-size:12px;">
+        <div><b>Seed:</b> ${escapeHtml(npc.seed)}</div>
+      </div>
+    </div>
+  `;
+
+  return head + `
+    <div class="sections">
+      ${stats}
+      ${desc}
+      ${pers}
+      ${story}
+      ${feats}
+      ${actions}
+      ${extras.join("")}
+      ${repro}
+    </div>
+  `;
+}
+
+function renderTXT(npc, opts){
+  const md = renderMD(npc, opts);
+  // Plain-ish: strip markdown headings/italics/bold but keep structure
+  return md
+    .replace(/^# (.*)$/gm, "$1\n" + "=".repeat(40))
+    .replace(/^## (.*)$/gm, "\n$1\n" + "-".repeat(40))
+    .replace(/^### (.*)$/gm, "\n$1\n" + ".".repeat(40))
+    .replace(/\*\*(.*?)\*\*/g, "$1")
+    .replace(/\*(.*?)\*/g, "$1")
+    .replace(/`([^`]+)`/g, "$1");
+}
+
+function setView(mode){
+  if(mode==="raw"){
+    els.outRaw.style.display = "";
+    els.outFormatted.style.display = "none";
+    els.viewPill.textContent = "Raw";
+  } else {
+    els.outRaw.style.display = "none";
+    els.outFormatted.style.display = "";
+    els.viewPill.textContent = "Formatted";
+  }
+}
+
+function updateOutput(){
+  if(!CURRENT){
+    els.outFormatted.innerHTML = `<div class="small" style="color:var(--muted);">Click “Generate NPC”.</div>`;
+    els.outRaw.textContent = "Click “Generate NPC”.";
+    els.metaPill.textContent = "—";
+    els.debugMini.textContent = "";
+    return;
+  }
+  const opts = currentOpts();
+  const raw = (els.inPreviewFmt.value==="txt") ? renderTXT(CURRENT, opts) : renderMD(CURRENT, opts);
+  const formattedHtml = renderHTML(CURRENT, opts);
+  const needle = (els.inFind?.value || "").trim();
+
+  els.outRaw.textContent = raw;
+  els.outFormatted.innerHTML = applyHighlight(formattedHtml, needle);
+
+  els.metaPill.textContent = `${CURRENT.race} • ${CURRENT.class} • ${CURRENT.alignment}`;
+  els.seedPill.textContent = `Seed: ${CURRENT.seed}`;
+  els.debugMini.textContent =
+    `Tier: ${CURRENT.tierKey} | AC ${CURRENT.stats.ac} | HP ${CURRENT.stats.hp} | PB +${CURRENT.stats.prof} | DC ${CURRENT.stats.dc}`;
+}
+
+function currentOpts(){
+  return {
+    name: els.inName.value,
+    seed: (els.inSeed?.value || "").trim(),
+    pronouns: els.inPronouns.value,
+    raceKey: els.inRace.value,
+    classKey: els.inClass.value,
+    tierKey: els.inTier.value,
+    region: els.inRegion.value,
+    tone: els.inTone.value,
+    notes: els.inNotes.value,
+    includeGear: els.ckIncludeGear.checked,
+    includePlot: els.ckIncludePlot.checked,
+    compact: els.ckCompact.checked,
+  };
+}
+
+/* ===== UI wiring ===== */
+
+let seed = makeSeed();
+let nudge = 0;
+
+function generate(useNewSeed=true){
+  const opts = currentOpts();
+  if(opts.seed){
+    seed = opts.seed;
+  } else if(useNewSeed){
+    seed = makeSeed();
+  }
+  nudge = 0;
+  const built = buildNPC(seed, opts, nudge);
+  CURRENT = built;
+  location.hash = encodeURIComponent(seed);
+
+  updateOutput();
+  toast("NPC generated");
+}
+
+function reroll(){
+  seed = makeSeed(); nudge = 0;
+  CURRENT = buildNPC(seed, currentOpts(), nudge);
+  updateOutput();
+  toast("Rerolled");
+}
+
+function clearAll(){
+  els.inName.value = "";
+  els.inPronouns.value = "";
+  els.inRace.value = "";
+  els.inClass.value = "";
+  els.inTier.value = "random";
+  els.inRegion.value = "";
+  els.inTone.value = "";
+  els.inNotes.value = "";
+  els.ckIncludeGear.checked = true;
+  els.ckIncludePlot.checked = true;
+  els.ckCompact.checked = false;
+  els.inPreviewFmt.value = "md";
+  CURRENT = null;
+  seed = makeSeed(); nudge = 0;
+  updateOutput();
+  toast("Cleared");
+}
+
+function copyOut(){
+  if(!CURRENT){ toast("Nothing to copy"); return; }
+  const opts = currentOpts();
+  const fmt = els.inPreviewFmt.value;
+  const text = (fmt==="txt") ? renderTXT(CURRENT, opts) : renderMD(CURRENT, opts);
+  navigator.clipboard.writeText(text).then(()=>toast("Copied to clipboard")).catch(()=>toast("Copy failed"));
+}
+
+function exportMD(){
+  if(!CURRENT){ toast("Nothing to export"); return; }
+  const opts = currentOpts();
+  const md = renderMD(CURRENT, opts);
+  const safe = CURRENT.name.replace(/[^\w\s-]/g,"").trim().replace(/\s+/g,"_") || "npc";
+  download(`${safe}.md`, md);
+}
+function exportTXT(){
+  if(!CURRENT){ toast("Nothing to export"); return; }
+  const opts = currentOpts();
+  const txt = renderTXT(CURRENT, opts);
+  const safe = CURRENT.name.replace(/[^\w\s-]/g,"").trim().replace(/\s+/g,"_") || "npc";
+  download(`${safe}.txt`, txt);
+}
+function exportJSON(){
+  if(!CURRENT){ toast("Nothing to export"); return; }
+  const safe = CURRENT.name.replace(/[^\w\s-]/g,"").trim().replace(/\s+/g,"_") || "npc";
+  download(`${safe}.json`, JSON.stringify(CURRENT, null, 2));
+}
+
+function applySeed(){
+  const s = (els.inSeed?.value || "").trim();
+  if(!s){ toast("Paste a seed first"); return; }
+  seed = s;
+  nudge = 0;
+  location.hash = encodeURIComponent(seed);
+  CURRENT = buildNPC(seed, currentOpts(), nudge);
+  updateOutput();
+  toast("Seed applied");
+}
+
+function copyShareLink(){
+  const s = (els.inSeed?.value || CURRENT?.seed || "").trim();
+  if(!s){ toast("Nothing to share yet"); return; }
+  const url = `${location.origin}${location.pathname}#${encodeURIComponent(s)}`;
+  navigator.clipboard.writeText(url).then(()=>toast("Share link copied")).catch(()=>toast("Copy failed"));
+}
+
+
+function newSeed(){
+  seed = makeSeed();
+  nudge = 0;
+  els.seedPill.textContent = `Seed: ${seed}`;
+
+// If there is a seed in the URL hash, load it (great for sharing)
+if(location.hash && location.hash.length > 1){
+  const hs = decodeURIComponent(location.hash.slice(1));
+  // Seed-sharing: keep the input empty (user-controlled), but allow reproduction via the URL.
+  seed = hs;
+  els.seedPill.textContent = `Seed: ${seed}`;
+}
+
+setView("formatted");
+  if(CURRENT){
+    CURRENT = buildNPC(seed, currentOpts(), nudge);
+    updateOutput();
+    toast("New seed applied");
+  } else {
+    toast("New seed set");
+  }
+}
+
+function nudgeKind(){
+  if(!CURRENT){ generate(true); }
+  nudge = clamp(nudge+1, -2, 2);
+  CURRENT = buildNPC(seed, currentOpts(), nudge);
+  updateOutput();
+  toast("Nudged kinder");
+}
+function nudgeDark(){
+  if(!CURRENT){ generate(true); }
+  nudge = clamp(nudge-1, -2, 2);
+  CURRENT = buildNPC(seed, currentOpts(), nudge);
+  updateOutput();
+  toast("Nudged darker");
+}
+
+/* ===== Populate selects ===== */
+
+function fillSelect(selectEl, items, getLabel){
+  selectEl.innerHTML = "";
+  for(const it of items){
+    const opt = document.createElement("option");
+    opt.value = it.key ?? it;
+    opt.textContent = getLabel ? getLabel(it) : (it.name ?? it);
+    selectEl.appendChild(opt);
+  }
+}
+
+fillSelect(els.inRace, RACES, r => r.name);
+fillSelect(els.inClass, CLASSES, c => c.name);
+
+// default seed pill
+els.seedPill.textContent = `Seed: ${seed}`;
+
+/* ===== Event listeners ===== */
+$("#btnGen").addEventListener("click", ()=>generate(true));
+$("#btnReroll").addEventListener("click", ()=>reroll());
+$("#btnClear").addEventListener("click", ()=>clearAll());
+
+$("#btnCopy").addEventListener("click", ()=>copyOut());
+$("#btnExportMD").addEventListener("click", ()=>exportMD());
+$("#btnExportTXT").addEventListener("click", ()=>exportTXT());
+$("#btnExportJSON").addEventListener("click", ()=>exportJSON());
+
+$("#btnNewSeed").addEventListener("click", ()=>newSeed());
+$("#btnApplySeed").addEventListener("click", ()=>applySeed());
+$("#btnCopyLink").addEventListener("click", ()=>copyShareLink());
+$("#btnViewFormatted").addEventListener("click", ()=>setView("formatted"));
+$("#btnViewRaw").addEventListener("click", ()=>setView("raw"));
+$("#btnNudgeGood").addEventListener("click", ()=>nudgeKind());
+$("#btnNudgeEvil").addEventListener("click", ()=>nudgeDark());
+
+els.inPreviewFmt.addEventListener("change", updateOutput);
+els.inFind.addEventListener("input", updateOutput);
+els.ckIncludeGear.addEventListener("change", updateOutput);
+els.ckIncludePlot.addEventListener("change", updateOutput);
+els.ckCompact.addEventListener("change", updateOutput);
+
+// If inputs change and an NPC exists, keep same seed but regenerate to reflect constraints
+["inName","inPronouns","inRace","inClass","inTier","inRegion","inTone","inNotes"].forEach(id=>{
+  const el = $("#"+id);
+  el.addEventListener("change", ()=>{
+    if(!CURRENT) return;
+    CURRENT = buildNPC(seed, currentOpts(), nudge);
+    updateOutput();
+    toast("Updated");
+  });
+});
+
+updateOutput();
+</script>
+</body>
+</html>
