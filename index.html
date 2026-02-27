@@ -181,7 +181,7 @@
           <div class="t">Generator Inputs</div>
           <div class="s">Leave blank for fully random. Race/Class change stats, features, and flavor.</div>
         </div>
-        <span class="pill" id="seedPill">Seed: —</span>
+        <span class="pill" id="seedPill">Seed: -</span>
       </div>
 
       <div class="bd grid">
@@ -296,7 +296,7 @@
 Tip: Race/Class influence ability biases, proficiencies, spell flavor, and “signature move” suggestions.
         
 <br><br>
-<span style="opacity:.8;">—</span><br>
+<span style="opacity:.8;">-</span><br>
 <a href="https://ko-fi.com/schlabbie" target="_blank" style="color:var(--accent); text-decoration:none;">☕ Support on Ko‑Fi</a><br>
 <a href="https://schlabbster.github.io/Schlabbies-Arcane-Arena/" target="_blank" style="color:var(--accent); text-decoration:none;">🃏 Visit the Arcane Arena</a>
 </div>
@@ -309,7 +309,7 @@ Tip: Race/Class influence ability biases, proficiencies, spell flavor, and “si
           <div class="t">Generated NPC</div>
           <div class="s">Ready-to-run. Tweak anything, then export.</div>
         </div>
-        <span class="pill" id="metaPill">—</span>
+        <span class="pill" id="metaPill">-</span>
       </div>
 
       <div class="bd split">
@@ -708,14 +708,14 @@ const BACKSTORY_TIERS = {
     "helped build something they now regret existing",
     "escaped an arranged marriage by faking death",
     "took the blame for someone they love",
-    "swore off violence—until today"
+    "swore off violence-until today"
   ],
   rare: [
     "died once, briefly, and remembers the waiting room between worlds",
     "carries a prophecy that seems to describe someone else",
     "was replaced by a changeling as a child (or believes so)",
     "spent months in a time-loop and learned one impossible trick",
-    "heard a god speak their name in a crowd—and no one else noticed",
+    "heard a god speak their name in a crowd-and no one else noticed",
     "was born during a planar alignment that still follows them",
     "is the last witness to an erased event",
     "owes a favor to an ancient dragon"
@@ -786,7 +786,7 @@ const SECRETS = [
   "is slowly turning into something else",
   "has a bounty in a neighboring region",
   "knows a hidden passage under the city",
-  "once worked for the villain—briefly",
+  "once worked for the villain-briefly",
   "is searching for the owner of a cursed ring",
   "can’t sleep unless they hear running water",
   "was present at a famous tragedy and survived"
@@ -796,7 +796,7 @@ const PLOT_HOOKS = [
   "needs discreet help retrieving a stolen item",
   "offers a job escorting someone who lies about who they are",
   "asks the party to investigate a vanished coworker",
-  "can introduce the party to a powerful contact—if they prove trustworthy",
+  "can introduce the party to a powerful contact-if they prove trustworthy",
   "begs the party to clear their name before a hearing",
   "has half of a key and needs the other half",
   "saw something they shouldn’t have, and someone noticed",
@@ -812,7 +812,7 @@ const PLOT_HOOKS = [
   "needs witnesses for a dangerous negotiation",
   "asks for help smuggling someone out of town",
   "has a lead on a missing adventuring party",
-  "wants the party to deliver a sealed package—no questions",
+  "wants the party to deliver a sealed package-no questions",
   "needs help decoding a map written in song",
   "seeks someone to stand in for them at an event",
   "asks the party to test a prototype magical device"
@@ -1167,7 +1167,7 @@ function buildAppearance(rng, race, tone){
     `Wears ${pickFromTiers(rng, APPEARANCE_TIERS.style)} and carries ${pickFromTiers(rng, APPEARANCE_TIERS.detail)}.`
   ];
   // Race seasoning
-  if(race?.key==="dwarf") pieces.push("Their presence is grounded—solid as old stone.");
+  if(race?.key==="dwarf") pieces.push("Their presence is grounded-solid as old stone.");
   if(race?.key==="elf") pieces.push("They move like a practiced dancer, too quiet for their own good.");
   if(race?.key==="tiefling") pieces.push("A subtle heat clings to them, like air above sun-baked rock.");
   if(tone==="Comedic" && chance(rng, 0.6)) pieces.push("Something about them is unmistakably, inconveniently dramatic.");
@@ -1602,8 +1602,8 @@ function renderMD(npc, opts){
   const lines = [];
 
   lines.push(`# ${npc.name}`);
-  lines.push(`*${npc.race} ${npc.class}* — **${npc.occupation}**`);
-  lines.push(`**Alignment:** ${npc.alignment}  •  **Region:** ${npc.region || "—"}  •  **Tone:** ${npc.tone || "—"}  •  **Pronouns:** ${pron}`);
+  lines.push(`*${npc.race} ${npc.class}* - **${npc.occupation}**`);
+  lines.push(`**Alignment:** ${npc.alignment}  •  **Region:** ${npc.region || "-"}  •  **Tone:** ${npc.tone || "-"}  •  **Pronouns:** ${pron}`);
   lines.push(``);
   lines.push(`## Description`);
   if(compact){
@@ -1663,7 +1663,7 @@ function renderHTML(npc, opts){
     <div class="npcHead">
       <div>
         <h2>${escapeHtml(npc.name)}</h2>
-        <div class="meta">${escapeHtml(npc.race)} ${escapeHtml(npc.class)} — ${escapeHtml(npc.occupation)}</div>
+        <div class="meta">${escapeHtml(npc.race)} ${escapeHtml(npc.class)} - ${escapeHtml(npc.occupation)}</div>
       </div>
       <div class="pills">
         <span class="pill2">${escapeHtml(npc.alignment)}</span>
@@ -1806,7 +1806,7 @@ function updateOutput(){
   if(!CURRENT){
     els.outFormatted.innerHTML = `<div class="small" style="color:var(--muted);">Click “Generate NPC”.</div>`;
     els.outRaw.textContent = "Click “Generate NPC”.";
-    els.metaPill.textContent = "—";
+    els.metaPill.textContent = "-";
     els.debugMini.textContent = "";
     return;
   }
