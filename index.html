@@ -293,7 +293,7 @@
         </div>
 
         <div class="small">
-          Tip: Race/Class influence ability biases, proficiencies, spell flavor, and “signature move” suggestions.
+Tip: Race/Class influence ability biases, proficiencies, spell flavor, and “signature move” suggestions.
         
 <br><br>
 <span style="opacity:.8;">—</span><br>
@@ -347,13 +347,14 @@
               <div style="font-weight:800; margin-bottom:8px;">Quick Controls</div>
               <div class="grid">
                 <label>
-                  Output format (preview)
-                  <select id="inPreviewFmt">
-                    <option value="md">Markdown</option>
-                    <option value="txt">Plain text</option>
+                  Generation vibe
+                  <select id="inRarityMode">
+                    <option value="classic">Classic (mostly common)</option>
+                    <option value="balanced" selected>Balanced</option>
+                    <option value="weird">Weird (more rare)</option>
                   </select>
                 </label>
-                <button class="btn secondary" id="btnNewSeed">🔁 New Seed</button>
+                <button class="btn secondary" id="btnResetNudge">🎚️ Reset Nudge</button>
                 <button class="btn danger" id="btnNudgeEvil">😈 Nudge “darker”</button>
                 <button class="btn" id="btnNudgeGood">😇 Nudge “kinder”</button>
                 <div class="small">
@@ -396,7 +397,6 @@ const els = {
   ckIncludeGear: $("#ckIncludeGear"),
   ckIncludePlot: $("#ckIncludePlot"),
   ckCompact: $("#ckCompact"),
-  inPreviewFmt: $("#inPreviewFmt"),
   seedPill: $("#seedPill"),
   metaPill: $("#metaPill"),
   debugMini: $("#debugMini"),
@@ -444,6 +444,34 @@ function pickN(rng, arr, n){
   return out;
 }
 function chance(rng, p){ return rng() < p; }
+
+let RARITY_WEIGHTS = { common:0.7, uncommon:0.25, rare:0.05 };
+function pickRarity(rng, weights){
+  const w = weights || RARITY_WEIGHTS || { common:0.7, uncommon:0.25, rare:0.05 };
+  const r = rng();
+  const c = w.common ?? 0.7;
+  const u = w.uncommon ?? 0.25;
+  // rare is remainder
+  if(r < c) return "common";
+  if(r < c + u) return "uncommon";
+  return "rare";
+}
+function pickFromTiers(rng, tiers, weights){
+  const rar = pickRarity(rng, weights);
+  const arr = tiers[rar] && tiers[rar].length ? tiers[rar]
+            : (tiers.common && tiers.common.length ? tiers.common : Object.values(tiers).find(a=>a && a.length) || []);
+  return pick(rng, arr);
+}
+function pickNFromTiers(rng, tiers, n, weights){
+  const out = [];
+  const pool = [];
+  // build a mixed pool by sampling rarities repeatedly; helps reduce repetition.
+  for(let i=0;i<Math.max(10, n*6);i++){
+    pool.push(pickFromTiers(rng, tiers, weights));
+  }
+  // unique-ish
+  return pickN(rng, pool, n);
+}
 function titleCase(s){ return s.replace(/\b\w/g, c => c.toUpperCase()); }
 
 function toast(msg){
@@ -478,6 +506,8 @@ function download(filename, content){
   a.remove();
   setTimeout(()=>URL.revokeObjectURL(a.href), 500);
 }
+
+
 
 /* ===== Data ===== */
 
@@ -537,13 +567,72 @@ const QUIRKS = [
 ];
 
 const APPEARANCE = {
-  build:["wiry","lithe","broad-shouldered","stout","towering","compact","lean","soft-faced","scarred"],
-  face:["sharp cheekbones","a crooked nose","a freckled face","a weatherworn complexion","a faint burn scar","a calm, unreadable expression","a mischievous grin"],
-  hair:["braided hair","shaved sides","a topknot","wild curls","oiled and combed hair","a practical bun","hair streaked with gray","a hood always up"],
-  eyes:["bright green eyes","steel-gray eyes","honey-brown eyes","ink-dark eyes","pale, luminous eyes","one cloudy eye"],
-  style:["patched travel clothes","well-tailored attire","practical workwear","dusty leathers","ceremonial garments","a uniform with hidden repairs","robes with ink stains"],
-  detail:["a signet ring","a chipped holy symbol","a scar along the jaw","a tattoo of a constellation","calloused hands","a faint magical shimmer","mud-stained boots","a hidden dagger sheath"]
+  build:["wiry","lithe","broad-shouldered","stout","towering","compact","lean","soft-faced","scarred",
+    "athletic",
+    "gaunt",
+    "barrel-chested",
+    "willowy",
+    "compact and springy",
+    "stooped but strong",
+    "regal-postured",
+    "sunburnt and rugged"
+  ],
+  face:["sharp cheekbones","a crooked nose","a freckled face","a weatherworn complexion","a faint burn scar","a calm, unreadable expression","a mischievous grin",
+    "a dimpled smile",
+    "a stern brow",
+    "a sunken, tired gaze",
+    "a lacquered mask-like calm",
+    "a missing tooth",
+    "a ritual scar pattern",
+    "a faintly glowing birthmark"
+  ],
+  hair:["braided hair","shaved sides","a topknot","wild curls","oiled and combed hair","a practical bun","hair streaked with gray","a hood always up",
+    "a braid threaded with beads",
+    "a messy undercut",
+    "a shaved crown",
+    "long hair tied with leather cord",
+    "a hood lined with fur",
+    "hair dusted with ash",
+    "a scarf wrapped like a turban"
+  ],
+  eyes:["bright green eyes","steel-gray eyes","honey-brown eyes","ink-dark eyes","pale, luminous eyes","one cloudy eye",
+    "amber eyes with flecks of gold",
+    "blue eyes like glacier ice",
+    "violet eyes that seem too bright",
+    "eyes rimmed with kohl",
+    "one eye replaced by a glass sphere",
+    "eyes that reflect candlelight oddly"
+  ],
+  style:["patched travel clothes","well-tailored attire","practical workwear","dusty leathers","ceremonial garments","a uniform with hidden repairs","robes with ink stains",
+    "a merchant’s coat heavy with pockets",
+    "priestly vestments",
+    "hunter’s greens",
+    "a scholar’s layered robes",
+    "a sailor’s tar-stained jacket",
+    "fine clothes dulled by travel",
+    "ceremonial armor with etched trim"
+  ],
+  detail:["a signet ring","a chipped holy symbol","a scar along the jaw","a tattoo of a constellation","calloused hands","a faint magical shimmer","mud-stained boots","a hidden dagger sheath",
+    "a bundle of dried herbs",
+    "a cracked monocle",
+    "a ring of keys",
+    "a prayer strip sewn into clothing",
+    "ink-stained fingertips",
+    "a thin chain of trophies",
+    "a small clockwork trinket",
+    "a weathered badge"
+  ]
 };
+
+const APPEARANCE_TIERS = {
+  build: { common: APPEARANCE.build, uncommon:["athletic","gaunt","barrel-chested","regal-postured"], rare:["uncannily symmetrical","slightly translucent","moves as if underwater","seems carved from stone"] },
+  face: { common: APPEARANCE.face, uncommon:["a stern brow","a ritual scar pattern","a missing tooth"], rare:["a halo of faint freckles like constellations","a face that looks familiar to everyone","a smile that doesn’t reach the eyes"] },
+  hair: { common: APPEARANCE.hair, uncommon:["a braid threaded with beads","a messy undercut","a scarf wrapped like a turban"], rare:["hair that drifts as if in wind","locks that shimmer with starlight","a mane that changes color in shadow"] },
+  eyes: { common: APPEARANCE.eyes, uncommon:["amber eyes with flecks of gold","eyes rimmed with kohl","violet eyes that seem too bright"], rare:["eyes with no visible pupils","eyes that reflect someone else","a gaze that makes candles dim"] },
+  style: { common: APPEARANCE.style, uncommon:["a merchant’s coat heavy with pockets","hunter’s greens","a scholar’s layered robes"], rare:["clothes that never seem to get dirty","stitched garments of impossible fabric","a cloak that drinks in light"] },
+  detail:{ common: APPEARANCE.detail, uncommon:["a ring of keys","a cracked monocle","ink-stained fingertips"], rare:["a moving tattoo-map","a charm that whispers","a relic that hums near magic"] }
+};
+
 
 const PERSONALITY = {
   traits:["cautious","bold","soft-spoken","sharp-tongued","patient","restless","devout","skeptical","curious","dutiful","vain","generous","ruthless","cheerful"],
@@ -551,6 +640,42 @@ const PERSONALITY = {
   bonds:["a sibling in trouble","a mentor they owe","a lost love","their hometown","a sacred oath","a secret patron","their crew or unit","a stolen heirloom","a promised debt"],
   flaws:["quick to anger","cannot resist a wager","overconfident","terrible liar","holds grudges","easily distracted","fear of the dark","needs approval","reckless","secretly cowardly"]
 };
+
+const PERSONALITY_TIERS = {
+  traits: {
+    common: PERSONALITY.traits,
+    uncommon: [
+      "hyper-observant","warmly sarcastic","soft but unyielding","stoic","excitable","melancholic","overly formal","bluntly honest",
+      "streetwise","bookish","superstitious","recklessly optimistic"
+    ],
+    rare: [
+      "eerily calm","prophetically vague","otherworldly charming","unsettlingly sincere","quietly terrifying","radiantly compassionate",
+      "seems to know things they shouldn’t","laughs like they’re remembering another life"
+    ]
+  },
+  ideals: {
+    common: PERSONALITY.ideals,
+    uncommon: ["justice","mercy","self-reliance","discipline","artistry","duty","balance","truth"],
+    rare: ["apotheosis","the end justifies means","cosmic balance","the sanctity of names","the right to forget","the price of miracles"]
+  },
+  bonds: {
+    common: PERSONALITY.bonds,
+    uncommon: [
+      "a childhood friend turned enemy","a hidden community they protect","a debt to a dangerous healer","a stolen artifact they can’t return",
+      "a promise to a dying stranger","a letter they never sent","a secret heirloom","a lost companion animal"
+    ],
+    rare: [
+      "a pact that rewrote their fate","a saint’s relic bound to their blood","a shadow that follows them","a friend trapped in a mirror",
+      "a war they remember that never happened","a name carved into their bones"
+    ]
+  },
+  flaws: {
+    common: PERSONALITY.flaws,
+    uncommon: ["cannot stand to be ignored","compulsively helpful","jealous","impulsive","paranoid","recklessly brave","too curious","too proud"],
+    rare: ["addicted to forbidden magic","cannot tell the full truth","magnet for bad luck","terrified of being loved","hears whispers no one else hears","cannot resist a prophecy"]
+  }
+};
+
 
 const BACKSTORY_SEEDS = [
   "survived a disaster and still hears it in dreams",
@@ -562,8 +687,83 @@ const BACKSTORY_SEEDS = [
   "was accused of a crime they didn’t commit",
   "inherited a small business with a hidden basement door",
   "escaped a cult, but the cult hasn’t forgotten",
-  "owes their life to someone dangerous"
+  "owes their life to someone dangerous",
+  "was trained by a strict monastery, then walked away",
+  "won a duel they didn’t want and gained an enemy",
+  "lost everything in a fire and kept one strange object",
+  "spent years as a traveling medic in warzones",
+  "was an eager acolyte until faith turned complicated",
+  "sailed with pirates for one season and learned too much",
+  "found a talking blade that refuses to admit it talks",
+  "was hired to guard a secret they never learned"
 ];
+
+const BACKSTORY_TIERS = {
+  common: BACKSTORY_SEEDS,
+  uncommon: [
+    "was apprenticed to a genius who vanished overnight",
+    "stumbled into the Feywild and returned with a year missing",
+    "survived a shipwreck and still fears calm seas",
+    "watched a noble house collapse from within",
+    "helped build something they now regret existing",
+    "escaped an arranged marriage by faking death",
+    "took the blame for someone they love",
+    "swore off violence—until today"
+  ],
+  rare: [
+    "died once, briefly, and remembers the waiting room between worlds",
+    "carries a prophecy that seems to describe someone else",
+    "was replaced by a changeling as a child (or believes so)",
+    "spent months in a time-loop and learned one impossible trick",
+    "heard a god speak their name in a crowd—and no one else noticed",
+    "was born during a planar alignment that still follows them",
+    "is the last witness to an erased event",
+    "owes a favor to an ancient dragon"
+  ]
+};
+
+const QUIRK_TIERS = {
+  common: QUIRKS,
+  uncommon: [
+    "keeps a strict ritual before sleep",
+    "refuses to say certain words aloud",
+    "always sits near windows",
+    "avoids mirrors when possible",
+    "makes tiny paper charms when nervous",
+    "asks odd questions to test people",
+    "taps out rhythms on the table",
+    "insists on repaying even small kindnesses"
+  ],
+  rare: [
+    "never casts a shadow in bright light",
+    "people forget their name moments after hearing it",
+    "animals react as if they recognize them",
+    "their reflection sometimes lags behind",
+    "their voice carries a faint echo of another person",
+    "their footprints occasionally smolder or frost",
+    "their presence disrupts simple clocks",
+    "they bleed ink when cut"
+  ]
+};
+
+const ACTION_FLAVOR_TIERS = {
+  common: ["force","radiant","necrotic","fire","cold","thunder","psychic","poison"],
+  uncommon: ["acid","lightning","piercing","slashing","bludgeoning","shadow","moonlit"],
+  rare: ["dream","time","void","starfire","blood-magic","echo","hollow light"]
+};
+
+const SIGNATURE_TIERS = {
+  common: ["Feint & Strike","Shield Bash","Marked Shot","Pressure Point","Rallying Verse","Shadow Snare","Second Wind Burst","Grapple & Throw"],
+  uncommon: ["Disarming Flourish","Smoke Bomb Escape","Runic Ward","Blessing Surge","Snareline Trap","Hexbrand Curse","Rage Rush","Illusory Double"],
+  rare: ["Fate Sever","Soulbrand Oath","Eldritch Eclipse","Seraphic Rebuke","Stone-Splitting Palm","Tempest Chorus","Gravetide Command","Mirror-Step Ambush"]
+};
+
+const NAME_EPITHET_TIERS = {
+  common: ["the Bold","the Quiet","the Sly","the Kind","the Stern","the Lucky","the Swift","the Patient"],
+  uncommon: ["the Candle-Keeper","the Fox of the Docks","the Ash-Marked","the Mapmaker","the Needlehand","the Oathbound","the Moon-Touched","the Ironhearted"],
+  rare: ["the Unwritten","the Twice-Born","the Star-Sworn","the Hollow-Eyed","the Debt of Dragons","the Name-That-Shouldn’t-Be","the Last Witness","the Doorwalker"]
+};
+
 
 const SECRETS = [
   "is an informant for a rival faction",
@@ -573,7 +773,23 @@ const SECRETS = [
   "stole something magical and doesn’t know how to return it",
   "is related to a local noble or crime boss",
   "can read an ancient script no one else can",
-  "is protecting a runaway or hidden relic"
+  "is protecting a runaway or hidden relic",
+  "Is being blackmailed by a rival faction",
+  "Has accidentally caused a magical catastrophe",
+  "Carries a cursed heirloom",
+  "Is not who they claim to be",
+  "Knows the location of a hidden vault",
+  "Is secretly of royal blood",
+  "Has struck a pact with an unknown entity",
+  "Is under magical surveillance",
+  "is carrying contraband for someone powerful",
+  "is slowly turning into something else",
+  "has a bounty in a neighboring region",
+  "knows a hidden passage under the city",
+  "once worked for the villain—briefly",
+  "is searching for the owner of a cursed ring",
+  "can’t sleep unless they hear running water",
+  "was present at a famous tragedy and survived"
 ];
 
 const PLOT_HOOKS = [
@@ -583,7 +799,23 @@ const PLOT_HOOKS = [
   "can introduce the party to a powerful contact—if they prove trustworthy",
   "begs the party to clear their name before a hearing",
   "has half of a key and needs the other half",
-  "saw something they shouldn’t have, and someone noticed"
+  "saw something they shouldn’t have, and someone noticed",
+  "Needs help retrieving a stolen artifact",
+  "Seeks protection from unseen assassins",
+  "Wants escorts into forbidden ruins",
+  "Offers coin for monster hunting",
+  "Requests aid in breaking a curse",
+  "Needs proof of innocence",
+  "Wants a rival exposed",
+  "Seeks companions for a dangerous expedition",
+  "offers to pay the party in favors, not coin",
+  "needs witnesses for a dangerous negotiation",
+  "asks for help smuggling someone out of town",
+  "has a lead on a missing adventuring party",
+  "wants the party to deliver a sealed package—no questions",
+  "needs help decoding a map written in song",
+  "seeks someone to stand in for them at an event",
+  "asks the party to test a prototype magical device"
 ];
 
 const GEAR_COMMON = [
@@ -592,31 +824,193 @@ const GEAR_COMMON = [
 ];
 
 const SPELL_FLAVOR = {
-  wizard:["ritual circles","precise sigils","inked diagrams"],
-  cleric:["prayers","radiant hymns","symbol-lit miracles"],
-  druid:["living vines","animal whispers","earth-scented magic"],
-  sorcerer:["raw surges","glittering arcs","unsteady power"],
-  warlock:["shadow contracts","whispered names","eldritch marks"],
-  bard:["resonant chords","poetic commands","enchanted refrains"],
+  wizard:["ritual circles","precise sigils","inked diagrams",
+    "geometric lattices",
+    "cold logic mantras",
+    "mirror-ink glyphs"
+  ],
+  cleric:["prayers","radiant hymns","symbol-lit miracles",
+    "incense-lit blessings",
+    "bell-chime invocations",
+    "saintly vows"
+  ],
+  druid:["living vines","animal whispers","earth-scented magic",
+    "spore-breath charms",
+    "river-stone prayers",
+    "root-etched signs"
+  ],
+  sorcerer:["raw surges","glittering arcs","unsteady power",
+    "crackling veins of light",
+    "wild laughter",
+    "gravity-bent sparks"
+  ],
+  warlock:["shadow contracts","whispered names","eldritch marks",
+    "pact-sigils that crawl",
+    "names scratched in air",
+    "black candle smoke"
+  ],
+  bard:["resonant chords","poetic commands","enchanted refrains",
+    "crowd-hushed crescendos",
+    "taunting couplets",
+    "silver-tongued refrains"
+  ],
 };
 
 const NAMES = {
-  human:["Arin","Bryn","Cora","Dain","Elowen","Faris","Garrick","Hale","Iria","Joren","Kael","Lysa","Mara","Nolan","Orin","Perrin","Quinn","Rowan","Sable","Tamsin","Varric","Wren"],
-  elf:["Aelar","Caelynn","Erevan","Lirael","Myriil","Naeris","Syllin","Thamior","Velas","Zereni"],
-  dwarf:["Brom","Dagna","Elda","Fargrim","Gimli","Hilda","Korgan","Riswynn","Thrain","Vistra"],
-  halfling:["Alton","Bree","Cade","Daisy","Eldon","Fenn","Kithri","Lyle","Milo","Poppy"],
-  gnome:["Bimpnottin","Ellywick","Fonkin","Lilli","Nim","Orla","Quill","Rolo","Tink","Warryn"],
+  human:["Arin","Bryn","Cora","Dain","Elowen","Faris","Garrick","Hale","Iria","Joren","Kael","Lysa","Mara","Nolan","Orin","Perrin","Quinn","Rowan","Sable","Tamsin","Varric","Wren",
+    "Alden",
+    "Bran",
+    "Celia",
+    "Darvin",
+    "Eira",
+    "Felix",
+    "Gwen",
+    "Hadrian",
+    "Isolde",
+    "Jonas",
+    "Kiera",
+    "Leif",
+    "Maeve",
+    "Nia",
+    "Oskar",
+    "Rhea",
+    "Silas",
+    "Talia"
+  ],
+  elf:["Aelar","Caelynn","Erevan","Lirael","Myriil","Naeris","Syllin","Thamior","Velas","Zereni",
+    "Ariandel",
+    "Faelar",
+    "Ilyana",
+    "Sarith",
+    "Elyndar",
+    "Nuala",
+    "Rolen",
+    "Shava",
+    "Tyrion",
+    "Ylthari"
+  ],
+  dwarf:["Brom","Dagna","Elda","Fargrim","Gimli","Hilda","Korgan","Riswynn","Thrain","Vistra",
+    "Baern",
+    "Gunnloda",
+    "Harbek",
+    "Katla",
+    "Morgran",
+    "Runa",
+    "Tordek",
+    "Una",
+    "Vondal",
+    "Yngvar"
+  ],
+  halfling:["Alton","Bree","Cade","Daisy","Eldon","Fenn","Kithri","Lyle","Milo","Poppy",
+    "Bungo",
+    "Callie",
+    "Dimple",
+    "Eppy",
+    "Jasper",
+    "Lavinia",
+    "Nibs",
+    "Roscoe",
+    "Tobbin",
+    "Willow"
+  ],
+  gnome:["Bimpnottin","Ellywick","Fonkin","Lilli","Nim","Orla","Quill","Rolo","Tink","Warryn",
+    "Boddynock",
+    "Caramip",
+    "Dimble",
+    "Fizban",
+    "Jebeddo",
+    "Loopmottin",
+    "Namfoodle",
+    "Roywyn",
+    "Zanna",
+    "Zook"
+  ],
   "half-elf":["Ari","Cyran","Elira","Jace","Kallia","Lorin","Mira","Nerys","Seren","Thalen"],
   "half-orc":["Drog","Grena","Hruk","Korga","Mog","Nura","Ront","Shura","Tark","Ugra"],
-  tiefling:["Akmenos","Bryseis","Damaia","Kallista","Leucis","Mephis","Nerissa","Orianna","Rieta","Zor"],
-  dragonborn:["Arjhan","Balasar","Daar","Kava","Kriv","Mehen","Mishann","Nala","Rhogar","Sora"],
-  orc:["Brakka","Dura","Gorn","Hesha","Krag","Mura","Ruga","Sharn","Thok","Yagra"],
-  goliath:["Aukan","Gauthak","Kavaki","Manneo","Nalla","Orilo","Pavak","Thuunlakalaga","Vimak","Zalathar"],
-  aasimar:["Astra","Cassiel","Elyra","Ithuriel","Lumen","Mirael","Nahia","Oria","Seraph","Valen"]
+  tiefling:["Akmenos","Bryseis","Damaia","Kallista","Leucis","Mephis","Nerissa","Orianna","Rieta","Zor",
+    "Azazel",
+    "Calista",
+    "Drexis",
+    "Eris",
+    "Kaida",
+    "Lazare",
+    "Nyx",
+    "Sable",
+    "Vex",
+    "Zathra"
+  ],
+  dragonborn:["Arjhan","Balasar","Daar","Kava","Kriv","Mehen","Mishann","Nala","Rhogar","Sora",
+    "Arix",
+    "Bharash",
+    "Kirr",
+    "Medrash",
+    "Nym",
+    "Rhasha",
+    "Sora",
+    "Torinn",
+    "Vutha",
+    "Zirel"
+  ],
+  orc:["Brakka","Dura","Gorn","Hesha","Krag","Mura","Ruga","Sharn","Thok","Yagra",
+    "Asha",
+    "Borg",
+    "Dakka",
+    "Gresh",
+    "Karra",
+    "Mok",
+    "Rakka",
+    "Sutha",
+    "Urz",
+    "Zog"
+  ],
+  goliath:["Aukan","Gauthak","Kavaki","Manneo","Nalla","Orilo","Pavak","Thuunlakalaga","Vimak","Zalathar",
+    "Briakka",
+    "Dovah",
+    "Granite",
+    "Kothar",
+    "Lannok",
+    "Mavok",
+    "Rovak",
+    "Skathi",
+    "Tharka",
+    "Yurim"
+  ],
+  aasimar:["Astra","Cassiel","Elyra","Ithuriel","Lumen","Mirael","Nahia","Oria","Seraph","Valen",
+    "Aurel",
+    "Cyris",
+    "Elion",
+    "Iriel",
+    "Lyra",
+    "Neriel",
+    "Orielle",
+    "Sorin",
+    "Vaelis",
+    "Zeraph"
+  ]
 };
 const SURNAMES = [
   "Thorne","Hawke","Stone","Rivermark","Ashford","Duskwood","Brightwater","Keen","Blackwell","Ironroot",
-  "Sable","Glimmer","Redfern","Marrow","Vintner","Coppers","Farwind","Proudmoore","Greycloak","Hearth"
+  "Sable","Glimmer","Redfern","Marrow","Vintner","Coppers","Farwind","Proudmoore","Greycloak","Hearth",
+  "Stormbrow",
+  "Dunewalker",
+  "Silverhand",
+  "Wintermere",
+  "Oakenshade",
+  "Starling",
+  "Hollowmere",
+  "Emberfall",
+  "Kestrel",
+  "Mistweaver",
+  "Deepdelver",
+  "Goldleaf",
+  "Rimeward",
+  "Cindercoat",
+  "Duskrunner",
+  "Foxglove",
+  "Thistledown",
+  "Wyrmwood",
+  "Seastrider",
+  "Crowley"
 ];
 
 /* ===== Tier presets ===== */
@@ -731,9 +1125,21 @@ function randomName(rng, raceKey){
   const pool = NAMES[raceKey] || NAMES.human;
   const first = pick(rng, pool);
   const last = pick(rng, SURNAMES);
+
   // Sometimes single-name (esp. goliath / orc)
   if(["goliath","orc"].includes(raceKey) && chance(rng, 0.35)) return first;
-  return `${first} ${last}`;
+
+  // Uncommon/rare: epithet style (helps variety, feels fantasy)
+  let name = `${first} ${last}`;
+  if(chance(rng, 0.16)){
+    const epithet = pickFromTiers(rng, NAME_EPITHET_TIERS);
+    name = `${name} ${epithet}`;
+  }
+  // Rare: double surname
+  if(chance(rng, 0.05)){
+    name = `${first} ${last}-${pick(rng, SURNAMES)}`;
+  }
+  return name;
 }
 
 function pronounSet(rng, selected){
@@ -755,11 +1161,10 @@ function sentenceize(s){
 }
 
 function buildAppearance(rng, race, tone){
-  const a = APPEARANCE;
   const pieces = [
-    `A ${pick(rng, a.build)} figure with ${pick(rng, a.face)}.`,
-    `${titleCase(pick(rng, a.hair))} frames ${pick(rng, a.eyes)}.`,
-    `Wears ${pick(rng, a.style)} and carries ${pick(rng, a.detail)}.`
+    `A ${pickFromTiers(rng, APPEARANCE_TIERS.build)} figure with ${pickFromTiers(rng, APPEARANCE_TIERS.face)}.`,
+    `${titleCase(pickFromTiers(rng, APPEARANCE_TIERS.hair))} frames ${pickFromTiers(rng, APPEARANCE_TIERS.eyes)}.`,
+    `Wears ${pickFromTiers(rng, APPEARANCE_TIERS.style)} and carries ${pickFromTiers(rng, APPEARANCE_TIERS.detail)}.`
   ];
   // Race seasoning
   if(race?.key==="dwarf") pieces.push("Their presence is grounded—solid as old stone.");
@@ -772,8 +1177,8 @@ function buildAppearance(rng, race, tone){
 
 function makeBackstory(rng, npc){
   const {tone, region, cls, race, pron} = npc;
-  const seed = pick(rng, BACKSTORY_SEEDS);
-  const quirk = pick(rng, QUIRKS);
+  const seed = pickFromTiers(rng, BACKSTORY_TIERS);
+  const quirk = pickFromTiers(rng, QUIRK_TIERS);
   const bond = npc.bond;
   const ideal = npc.ideal;
   const flaw = npc.flaw;
@@ -809,12 +1214,12 @@ function makeBackstory(rng, npc){
 }
 
 function makePersonality(rng, compact=false){
-  const traitA = pick(rng, PERSONALITY.traits);
-  let traitB = pick(rng, PERSONALITY.traits);
-  if(traitB===traitA) traitB = pick(rng, PERSONALITY.traits);
-  const ideal = pick(rng, PERSONALITY.ideals);
-  const bond = pick(rng, PERSONALITY.bonds);
-  const flaw = pick(rng, PERSONALITY.flaws);
+  const traitA = pickFromTiers(rng, PERSONALITY_TIERS.traits);
+  let traitB = pickFromTiers(rng, PERSONALITY_TIERS.traits);
+  if(traitB===traitA) traitB = pickFromTiers(rng, PERSONALITY_TIERS.traits);
+  const ideal = pickFromTiers(rng, PERSONALITY_TIERS.ideals);
+  const bond = pickFromTiers(rng, PERSONALITY_TIERS.bonds);
+  const flaw = pickFromTiers(rng, PERSONALITY_TIERS.flaws);
 
   const out = { traitA, traitB, ideal, bond, flaw };
   const text = compact
@@ -846,6 +1251,10 @@ function suggestSignature(rng, clsKey, scores){
   };
   let pickList = lists[clsKey] || lists.commoner;
   let sig = pick(rng, pickList);
+
+  // Sprinkle in uncommon/rare signature moves sometimes to avoid repetition
+  if(chance(rng, 0.28)) sig = pickFromTiers(rng, SIGNATURE_TIERS);
+
 
   // best-stat seasoning
   if(best==="int") sig += " (tactical)";
@@ -983,7 +1392,7 @@ function makeAttacks(rng, npc){
   if(weapon==="Spell Attack"){
     const dc = saveDC(prof, abilMod);
     const flavor = SPELL_FLAVOR[cKey] ? pick(rng, SPELL_FLAVOR[cKey]) : "mystic gestures";
-    const effect = pick(rng, ["force","radiant","necrotic","fire","cold","thunder","psychic","poison"]);
+    const effect = pickFromTiers(rng, ACTION_FLAVOR_TIERS);
     line = `Spell Attack: +${toHit} to hit, range 60 ft., one target. Hit: ${damageDie} ${dmgSign}${dmgMod} ${effect} damage. (Save DC ${dc} for a secondary effect; described as ${flavor}.)`;
   } else {
     const extra = (cKey==="rogue" && (tierKey==="mid"||tierKey==="high"||tierKey==="elite")) ? " plus 1d6 sneak damage if an ally threatens the target" : "";
@@ -1047,6 +1456,7 @@ function makeGear(rng, npc){
 /* ===== Main generation ===== */
 
 let CURRENT = null;
+let BASE = null; // baseline (nudge=0) NPC for stable nudges
 
 function makeSeed(){
   // simple seed based on time + randomness
@@ -1133,6 +1543,45 @@ function buildNPC(seed, options, nudge=0){
     gear,
   };
   return npc;
+}
+
+function clone(obj){ return JSON.parse(JSON.stringify(obj)); }
+
+function buildNudgedFromBase(baseNpc, seed, opts, nudge){
+  // Keep the same core NPC (stats/appearance/etc.), but re-roll a few “soft” fields
+  // so nudges are always noticeable and feel consistent.
+  const rng = RNG.make(`${seed}|NUDGE|${nudge}`);
+  const out = clone(baseNpc);
+
+  out.alignment = alignmentFromNudge(rng, nudge);
+
+  // Shift personality a bit with each nudge
+  const p = makePersonality(rng, !!opts.compact);
+  out.personality = { traitA:p.traitA, traitB:p.traitB, ideal:p.ideal, bond:p.bond, flaw:p.flaw };
+
+  // Rebuild backstory using the new personality beats (keeps tone/region/race/class/pronouns)
+  const pron = pronounSet(rng, out.pronouns); // keep same set but normalize helper fields
+  const notes = (opts.notes || "").trim();
+  const storyCtx = {
+    tone: out.tone,
+    region: out.region,
+    cls: { key: out.classKey, name: out.class },
+    race: { key: out.raceKey, name: out.race },
+    pron,
+    ideal: out.personality.ideal,
+    bond: out.personality.bond,
+    flaw: out.personality.flaw,
+    notes
+  };
+  out.backstory = makeBackstory(rng, storyCtx);
+
+  // Optionally nudge secrets/hooks too (keeps it fresh but still “same NPC”)
+  if(opts.includePlot){
+    out.secret = pick(rng, SECRETS);
+    out.hook = pick(rng, PLOT_HOOKS);
+  }
+
+  return out;
 }
 
 /* ===== Rendering ===== */
@@ -1362,7 +1811,7 @@ function updateOutput(){
     return;
   }
   const opts = currentOpts();
-  const raw = (els.inPreviewFmt.value==="txt") ? renderTXT(CURRENT, opts) : renderMD(CURRENT, opts);
+  const raw = renderMD(CURRENT, opts);
   const formattedHtml = renderHTML(CURRENT, opts);
   const needle = (els.inFind?.value || "").trim();
 
@@ -1373,6 +1822,17 @@ function updateOutput(){
   els.seedPill.textContent = `Seed: ${CURRENT.seed}`;
   els.debugMini.textContent =
     `Tier: ${CURRENT.tierKey} | AC ${CURRENT.stats.ac} | HP ${CURRENT.stats.hp} | PB +${CURRENT.stats.prof} | DC ${CURRENT.stats.dc}`;
+}
+
+function applyRarityMode(){
+  const mode = (els.inRarityMode?.value || "balanced");
+  if(mode==="classic"){
+    RARITY_WEIGHTS = { common:0.82, uncommon:0.16, rare:0.02 };
+  } else if(mode==="weird"){
+    RARITY_WEIGHTS = { common:0.55, uncommon:0.33, rare:0.12 };
+  } else {
+    RARITY_WEIGHTS = { common:0.70, uncommon:0.25, rare:0.05 };
+  }
 }
 
 function currentOpts(){
@@ -1408,6 +1868,7 @@ function generate(useNewSeed=true){
   const built = buildNPC(seed, opts, nudge);
   CURRENT = built;
   location.hash = encodeURIComponent(seed);
+  BASE = clone(CURRENT);
 
   updateOutput();
   toast("NPC generated");
@@ -1432,9 +1893,10 @@ function clearAll(){
   els.ckIncludeGear.checked = true;
   els.ckIncludePlot.checked = true;
   els.ckCompact.checked = false;
-  els.inPreviewFmt.value = "md";
+  els./*removed*/inPreviewFmt.value = "md";
   CURRENT = null;
   seed = makeSeed(); nudge = 0;
+  BASE = null;
   updateOutput();
   toast("Cleared");
 }
@@ -1442,7 +1904,7 @@ function clearAll(){
 function copyOut(){
   if(!CURRENT){ toast("Nothing to copy"); return; }
   const opts = currentOpts();
-  const fmt = els.inPreviewFmt.value;
+  const fmt = els./*removed*/inPreviewFmt.value;
   const text = (fmt==="txt") ? renderTXT(CURRENT, opts) : renderMD(CURRENT, opts);
   navigator.clipboard.writeText(text).then(()=>toast("Copied to clipboard")).catch(()=>toast("Copy failed"));
 }
@@ -1499,6 +1961,7 @@ if(location.hash && location.hash.length > 1){
   els.seedPill.textContent = `Seed: ${seed}`;
 }
 
+applyRarityMode();
 setView("formatted");
   if(CURRENT){
     CURRENT = buildNPC(seed, currentOpts(), nudge);
@@ -1512,17 +1975,36 @@ setView("formatted");
 function nudgeKind(){
   if(!CURRENT){ generate(true); }
   nudge = clamp(nudge+1, -2, 2);
-  CURRENT = buildNPC(seed, currentOpts(), nudge);
+  const opts = currentOpts();
+  if(!BASE) BASE = clone(CURRENT);
+  CURRENT = buildNudgedFromBase(BASE, seed, opts, nudge);
   updateOutput();
   toast("Nudged kinder");
 }
 function nudgeDark(){
   if(!CURRENT){ generate(true); }
   nudge = clamp(nudge-1, -2, 2);
-  CURRENT = buildNPC(seed, currentOpts(), nudge);
+  const opts = currentOpts();
+  if(!BASE) BASE = clone(CURRENT);
+  CURRENT = buildNudgedFromBase(BASE, seed, opts, nudge);
   updateOutput();
   toast("Nudged darker");
 }
+
+function resetNudge(){
+  if(!CURRENT){ toast("Nothing to reset"); return; }
+  nudge = 0;
+  const opts = currentOpts();
+  if(BASE){
+    CURRENT = clone(BASE);
+  } else {
+    CURRENT = buildNPC(seed, opts, 0);
+    BASE = clone(CURRENT);
+  }
+  updateOutput();
+  toast("Nudge reset");
+}
+
 
 /* ===== Populate selects ===== */
 
@@ -1550,18 +2032,16 @@ $("#btnClear").addEventListener("click", ()=>clearAll());
 $("#btnCopy").addEventListener("click", ()=>copyOut());
 $("#btnExportMD").addEventListener("click", ()=>exportMD());
 $("#btnExportTXT").addEventListener("click", ()=>exportTXT());
-$("#btnExportJSON").addEventListener("click", ()=>exportJSON());
-
-$("#btnNewSeed").addEventListener("click", ()=>newSeed());
-$("#btnApplySeed").addEventListener("click", ()=>applySeed());
+$("#btnExportJSON").addEventListener("click", ()=>exportJSON());$("#btnApplySeed").addEventListener("click", ()=>applySeed());
 $("#btnCopyLink").addEventListener("click", ()=>copyShareLink());
 $("#btnViewFormatted").addEventListener("click", ()=>setView("formatted"));
 $("#btnViewRaw").addEventListener("click", ()=>setView("raw"));
 $("#btnNudgeGood").addEventListener("click", ()=>nudgeKind());
 $("#btnNudgeEvil").addEventListener("click", ()=>nudgeDark());
+$("#btnResetNudge").addEventListener("click", ()=>resetNudge());
 
-els.inPreviewFmt.addEventListener("change", updateOutput);
 els.inFind.addEventListener("input", updateOutput);
+els.inRarityMode.addEventListener("change", ()=>{ applyRarityMode(); if(CURRENT){ updateOutput(); toast("Vibe updated"); } });
 els.ckIncludeGear.addEventListener("change", updateOutput);
 els.ckIncludePlot.addEventListener("change", updateOutput);
 els.ckCompact.addEventListener("change", updateOutput);
@@ -1571,7 +2051,10 @@ els.ckCompact.addEventListener("change", updateOutput);
   const el = $("#"+id);
   el.addEventListener("change", ()=>{
     if(!CURRENT) return;
-    CURRENT = buildNPC(seed, currentOpts(), nudge);
+    const opts = currentOpts();
+    // Rebuild baseline on constraint changes
+    BASE = buildNPC(seed, opts, 0);
+    CURRENT = (nudge===0) ? clone(BASE) : buildNudgedFromBase(BASE, seed, opts, nudge);
     updateOutput();
     toast("Updated");
   });
